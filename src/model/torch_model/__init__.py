@@ -1,0 +1,1 @@
+from src.model.torch_model.main import main_script

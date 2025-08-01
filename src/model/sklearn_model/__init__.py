@@ -1,0 +1,1 @@
+from src.model.sklearn_model.main import main_script
