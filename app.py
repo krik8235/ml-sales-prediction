@@ -1,19 +1,16 @@
 import os
-import json
 import datetime
 import warnings
-
 import torch
 import pandas as pd
 import numpy as np
-
 from dotenv import load_dotenv # type: ignore
 import joblib
 import redis # type: ignore
 import redis.cluster # type: ignore
 from redis.cluster import ClusterNode # type: ignore
 from flask import Flask, request, jsonify # type: ignore
-from flask import Flask, request, jsonify, Response # type: ignore
+from flask import Flask, request, jsonify # type: ignore
 from flask_cors import CORS, cross_origin
 from waitress import serve
 import awsgi # type: ignore
@@ -32,28 +29,20 @@ AWS_LAMBDA_RUNTIME_API = os.environ.get('AWS_LAMBDA_RUNTIME_API', None)
 if AWS_LAMBDA_RUNTIME_API is None: load_dotenv(override=True)
 
 
-# global variables
-_redis_client = None
-model = None
-preprocessor = None
-backup_model = None
-
-
 # flask app config
 app = Flask(__name__)
 app.config['CORS_HEADERS'] = 'Content-Type'
 origins = ['http://localhost:3000', os.environ.get('MY_WEB'), os.environ.get('PRODUCTION_API_ROUTE') ]
 cors = CORS(app, resources={r'/v1/*': { 'origins': origins, }})
 
-@app.route('/')
-def hello_world():
-    env = os.environ.get('ENV', None)
-    if env == 'local': return """<p>Hello, world</p><p>I am an API endpoint.</p>"""
 
-    data = request.json if request.is_json else request.data.decode('utf-8')
-    main_logger.info(f"Request received! ENV: {env}, Data: {data}")
-    return jsonify({"message": f"Hello from Flask in Lambda! ENV: {env}", "received_data": data})
-   
+# global variables
+_redis_client = None
+model = None
+preprocessor = None
+backup_model = None
+original_df = None
+preprocessed_df = None
 
 
 def get_redis_client():
@@ -93,22 +82,31 @@ def get_redis_client():
 
 
 def load_artifacts():
-    global model, preprocessor, input_dim
+    global model, preprocessor, original_df, preprocessed_df
 
-    PREPROCESSOR_PATH = os.environ.get('PREPROCESSOR_PATH', None)
+    # load df
+    main_logger.info('loading original dataframe...')
+    original_df = data_handling.scripts.load_original_dataframe()
+    preprocessed_df, _, _ = data_handling.scripts.load_post_feature_engineer_dataframe()
+    preprocessed_df = preprocessed_df.drop('Unnamed: 0', axis=1)
+
+    # load the trained PyTorch model
+    main_logger.info("loading model...")
     input_dim = 59
-
-    if PREPROCESSOR_PATH is None or not os.path.exists(PREPROCESSOR_PATH):
-        raise FileNotFoundError(f"Preprocessor file not found at {PREPROCESSOR_PATH}")
-   
-    # Load the trained PyTorch model
-    main_logger.info("Loading model...")
     model = t.load_model(input_dim=input_dim, trig='grid')
     model.eval()
 
-    main_logger.info("Loading pre-processing artifacts...")
-    preprocessor = joblib.load(PREPROCESSOR_PATH)
-
+    main_logger.info("loading pre-processing artifacts...")
+    PREPROCESSOR_PATH = os.environ.get('PREPROCESSOR_PATH', None)
+    target_col = 'sales'
+    if PREPROCESSOR_PATH and os.path.exists(PREPROCESSOR_PATH):
+        preprocessor = joblib.load(PREPROCESSOR_PATH)
+    else:
+        num_cols, cat_cols = data_handling.scripts.categorize_num_cat_cols(df=preprocessed_df, target_col=target_col)
+        preprocessor = data_handling.scripts.handle_preprocessor(num_cols=num_cols, cat_cols=cat_cols)
+        
+    X_train = preprocessed_df.copy().drop(target_col, axis=1)
+    preprocessor.fit(X_train)
 
 
 def load_backup_model():
@@ -122,6 +120,10 @@ def load_backup_model():
             backup_model = None
 
 
+load_artifacts()
+
+load_backup_model()
+
 # backup_model = ElasticNet(
 #     alpha=0.00010076137476187376,
 #     l1_ratio=0.6001201735703293,
@@ -132,15 +134,25 @@ def load_backup_model():
 #     random_state=96
 # )
 
+
+@app.route('/')
+def hello_world():
+    env = os.environ.get('ENV', None)
+    if env == 'local': return """<p>Hello, world</p><p>I am an API endpoint.</p>"""
+
+    data = request.json if request.is_json else request.data.decode('utf-8')
+    main_logger.info(f"Request received! ENV: {env}, Data: {data}")
+    return jsonify({"message": f"Hello from Flask in Lambda! ENV: {env}", "received_data": data})
+
+
 @app.route('/v1/predict-price/<string:stockcode>', methods=['GET'])
 @cross_origin(origins=origins)
 def predict_price(stockcode):
-    # load original dataframe
-    original_df = data_handling.scripts.load_original_dataframe()
-
     # create new dataframe
     try: data = request.json
     except: data = None
+
+    NUM_PRICE_BINS = data.get('num_price_bins', 12) if data else 12
 
     stockcode = stockcode if stockcode else data.get('stockcode', '85123A') if data is not None else '85123A'
     df_target_stockcode = original_df.copy()[original_df['stockcode'] == stockcode] # type: ignore
@@ -158,95 +170,75 @@ def predict_price(stockcode):
     elif min_price > max_price:
         min_price, max_price = max_price, min_price
 
-    price_range = np.linspace(min_price, max_price, 10)
-
+    price_range = np.linspace(min_price, max_price, NUM_PRICE_BINS)
     mean_quantity = df_target_stockcode['quantity'].median()
-
-
+    country = df_target_stockcode['country'].mode().iloc[0]   
     new_data = {
         'invoicedate': np.datetime64(datetime.datetime.now()),
-        'invoiceno': data.get('invoiceno', np.nan) if data else np.nan,
-        'stockcode': stockcode,
-        'description': np.nan,
-        'quantity': np.int64(data.get('quantity', mean_quantity) if data else mean_quantity),
-        'customerid': np.nan,
-        'country': data.get('country', np.nan) if data else np.nan,
+        'invoiceno': [data.get('invoiceno', np.nan) if data else np.nan] * NUM_PRICE_BINS,
+        'stockcode': [stockcode] * NUM_PRICE_BINS,
+        'description': [np.nan] * NUM_PRICE_BINS,
+        'quantity': [np.int64(data.get('quantity', mean_quantity) if data else mean_quantity)] * NUM_PRICE_BINS,
+        'customerid': [np.nan] * NUM_PRICE_BINS,
+        'country': [data.get('country', country) if data else country] * NUM_PRICE_BINS,
+        'unitprice': price_range
     }
-   
-    # preprocess features, load model, make prediction
-    def generate_predictions_stream():
-        best_sales = -float('inf')
-        optimal_price = None
-        all_predictions = []
+    new_df = pd.DataFrame(new_data)
+    df = pd.concat([original_df, new_df], ignore_index=True)
+    df = data_handling.scripts.structure_missing_values(df=df)
+    df = data_handling.scripts.handle_feature_engineering(df=df)
 
-        for price_point in price_range:
-            predicted_sales = -float('inf')
+    target_col = 'sales'  
+    X = df.copy().drop(target_col, axis=1)
+    X = X.tail(NUM_PRICE_BINS)
 
-            # add relevant data to new data, then merge with original data (pre-engineering)
-            new_data['unitprice'] = price_point
-            new_df = pd.DataFrame([new_data])
-            df = pd.concat([original_df, new_df], ignore_index=True)
+    if preprocessor:
+        X = preprocessor.transform(X)
 
-            # runs feature engineering
-            df = data_handling.scripts.structure_missing_values(df=df)
-            df = data_handling.scripts.handle_feature_engineering(df=df)
-            
-            # load preprocessor
-            target_col = 'sales'
-            num_cols, cat_cols = data_handling.scripts.categorize_num_cat_cols(df=df, target_col=target_col)
-            preprocessor = data_handling.scripts.handle_preprocessor(num_cols=num_cols, cat_cols=cat_cols)
+    y_pred_actual = None
+    if model:
+        input_tensor = torch.tensor(X, dtype=torch.float32)
+        model.eval()
+        with torch.no_grad():
+            y_pred = model(input_tensor)
+            y_pred = y_pred.cpu().numpy().flatten()
+            y_pred_actual = np.exp(y_pred)
 
-            # preprocess input features
-            y = df[target_col]
-            X = df.copy().drop(columns=target_col, axis=1)
-            X = preprocessor.fit_transform(X)
+            main_logger.info(f"\nPrediction for stockcode {stockcode} - Atual Sales Predicted in $: {y_pred_actual}")
 
-            # tensor loader
-            input_tensor = torch.tensor(X, dtype=torch.float32)
-            
-            if model:
-                model.eval()
-                with torch.no_grad():
-                    y_pred = model(input_tensor)
-                    y_pred_all_stockcodes = y_pred.cpu().numpy().flatten()
-                    y_pred_stockcode = y_pred_all_stockcodes[-1]
-                    y_pred_actual_stockcode = np.exp(y_pred_stockcode)
+    if np.isinf(y_pred_actual).any() or (y_pred_actual == 0.0).any() or y_pred_actual is None: # type: ignore   
+        if backup_model:
+            y_pred = backup_model.predict(X)
+            y_pred_actual = np.exp(y_pred)
+    
+    elif not model and backup_model:
+        y_pred = backup_model.predict(X)
+        y_pred_actual = np.exp(y_pred)
+      
+    if y_pred_actual is not None:
+        new_df['sales'] =  y_pred_actual
+        optimal_row = new_df.loc[new_df['sales'].idxmax()]
+        optimal_price = optimal_row['unitprice']
+        best_sales = optimal_row['sales']
 
-                    main_logger.info(
-                        f"\nPrediction for stockcode {stockcode}:\nLogged Sales Predicted: {y_pred_stockcode:.4f}\n Actual Sales Predicted: $ {y_pred_actual_stockcode:,.4f}")
-                    
-                    predicted_sales = y_pred_actual_stockcode
-
-            elif backup_model:
-                y_pred_all_stockcodes = backup_model.predict(X)
-                y_pred_stockcode = y_pred_all_stockcodes[-1]
-                y_pred_actual_stockcode = np.exp(y_pred_stockcode)
-                predicted_sales = y_pred_actual_stockcode
-
-                main_logger.info(
-                    f"\nPrediction for stockcode {stockcode}:\nLogged Sales Predicted: {y_pred_stockcode:.4f}\nActual Sales Predicted: $ {y_pred_actual_stockcode:,.4f}")
-            
-
-            all_predictions.append({
-                "unit_price": float(price_point),
-                "predicted_sales": float(predicted_sales)
-            })
-
-            if predicted_sales > best_sales:
-                best_sales = predicted_sales
-                optimal_price = price_point
-
+        all_outputs = []
+        for _, row in new_df.iterrows():
             current_output = {
                 "stockcode": stockcode,
-                "unit_price": float(price_point),
-                "predicted_sales": float(predicted_sales),
-                "optimal_unit_price": float(optimal_price) if optimal_price else float(price_point),
-                "max_predicted_sales": float(best_sales) if best_sales else float(predicted_sales),
+                "unit_price": float(row['unitprice']),
+                "predicted_sales": float(row['sales']),
+                "optimal_unit_price": float(optimal_price), # type: ignore
+                "max_predicted_sales": float(best_sales), # type: ignore
             }
-            
-            yield json.dumps(current_output) + '\n'
+            all_outputs.append(current_output)
 
-    return Response(generate_predictions_stream(), mimetype='application/json') 
+        return jsonify(all_outputs)
+    
+    else:
+        return jsonify([])
+
+        # yield json.dumps(current_output) + '\n'
+    # return Response(generate_predictions_stream(), mimetype='application/json') 
 
 @app.after_request
 def add_header(response):   
@@ -259,15 +251,6 @@ def handler(event, context):
     import json
 
     main_logger.info("lambda handler invoked.")
-
-    try:
-        load_artifacts()
-    except (FileNotFoundError, Exception) as e:
-        main_logger.error(f"Failed to load model and artifacts: {e}")
-        return {
-            'statusCode': 500,
-            'body': json.dumps({'error': 'Failed to load artifacts'})
-        }
 
     try:
         get_redis_client()
@@ -284,9 +267,7 @@ def handler(event, context):
 if __name__ == '__main__':
     if os.environ.get('ENV') == 'local':
         main_logger.info("...running flask app with waitress for local development...")
-        load_artifacts()
-        load_backup_model()
         serve(app, host='0.0.0.0', port=5002)
-        
+
     else:
         app.run(host='0.0.0.0', port=5002)

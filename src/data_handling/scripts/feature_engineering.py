@@ -100,16 +100,21 @@ def handle_feature_engineering(df: pd.DataFrame, verbose: bool = False) -> pd.Da
     df_fin['customer_recency_days'] = _df_cus['customer_recency_days']
     max_recency = _df_cus['customer_recency_days'].max()
     df_fin['customer_recency_days'] = df_fin['customer_recency_days'].fillna(value=max_recency + 30)
+    df_fin['customer_recency_days'] = df_fin['customer_recency_days'].fillna(365)
 
     ## 2. customer_total_spend_ltm
-    _df_cus['customer_total_spend_ltm'] = _df_cus.groupby('customerid')['monthly_sales'].rolling(window=3, closed='left').sum().reset_index(level=0, drop=True)
-    df_fin['customer_total_spend_ltm'] = _df_cus['customer_total_spend_ltm']
-    df_fin['customer_total_spend_ltm'] = df_fin['customer_total_spend_ltm'].fillna(value=0)
+    if not _df_cus['customerid'].isna().all():
+        _df_cus['customer_total_spend_ltm'] = _df_cus.groupby('customerid')['monthly_sales'].rolling(window=3, closed='left').sum().reset_index(level=0, drop=True)
+        df_fin['customer_total_spend_ltm'] = _df_cus['customer_total_spend_ltm']
+        df_fin['customer_total_spend_ltm'] = df_fin['customer_total_spend_ltm'].fillna(value=0)
 
-    ## 3. customer_freq_ltm
-    _df_cus['customer_freq_ltm'] = _df_cus.groupby('customerid')['monthly_unique_invoices'].rolling(window=3, closed='left').sum().reset_index(level=0, drop=True)
-    df_fin['customer_freq_ltm'] = _df_cus['customer_freq_ltm']
-    df_fin['customer_freq_ltm'] = df_fin['customer_freq_ltm'].fillna(value=0)
+        ## 3. customer_freq_ltm
+        _df_cus['customer_freq_ltm'] = _df_cus.groupby('customerid')['monthly_unique_invoices'].rolling(window=3, closed='left').sum().reset_index(level=0, drop=True)
+        df_fin['customer_freq_ltm'] = _df_cus['customer_freq_ltm']
+        df_fin['customer_freq_ltm'] = df_fin['customer_freq_ltm'].fillna(value=0)
+    else:
+        df_fin['customer_freq_ltm'] = 0
+        df_fin['customer_total_spend_ltm'] = 0
 
 
     # imputation & data type transformation

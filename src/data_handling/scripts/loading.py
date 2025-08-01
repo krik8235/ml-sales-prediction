@@ -2,7 +2,7 @@ import os
 import datetime
 import pandas as pd
 
-from src._utils import retrieve_file_path, main_logger
+from src._utils import retrieve_file_path
 
 
 def load_original_dataframe() -> pd.DataFrame: # type: ignore

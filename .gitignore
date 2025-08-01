@@ -16,13 +16,12 @@ tmp/
 data/
 models/
 
-
 awscli-bundle/
 
-
-article_code_snippets.ipynb
 
 .note
 .legacy/
 
 preprocessors/
+
+notebooks/
