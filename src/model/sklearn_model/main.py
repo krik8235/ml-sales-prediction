@@ -17,9 +17,6 @@ def main_script(
     try:
         best_model, best_hparams = sk.load_model(model_name=model_name, trig='best')
         
-        if not best_model:
-            raise Exception('Best model not found. Start tuning new one.')
-
         if best_model is not None:
             match model_name:
                 case 'gbm':
@@ -32,12 +29,11 @@ def main_script(
 
             _, mse_best, mae_best, rmsle_best = sk.make_prediction(X=X_val, y=y_val, model=best_model)
             main_logger.info(
-                f"\nSuccessfully loaded best performing model {model_name}\nBest hyperparameters: {best_hparams}\nMSE: {mse_best:,.4f}\nMAE: $ {mae_best:,.4f}\nRMSLE: {rmsle_best:,.4f}")
-        
-        return best_model
+                f"successfully loaded best performing model {model_name}\nBest hyperparameters: {best_hparams}\nMSE: {mse_best:,.4f}\nMAE: $ {mae_best:,.4f}\nRMSLE: {rmsle_best:,.4f}")
+            
+            return best_model
 
-    except:
-        try:   
+        else:
             # grid search
             best_model_grid, best_hparams_grid, rmsle_grid = load_or_run_grid_search(
                 X_train=X_train, X_val=X_val, y_train=y_train, y_val=y_val,
@@ -58,8 +54,29 @@ def main_script(
             best_hparams = best_hparams_bayesian if rmsle_bayesian < rmsle_grid  else best_hparams_grid # type: ignore
             sk.save_model(model=best_model, hparams=best_hparams, model_name=model_name, trig='best') # type: ignore
 
-        except:
-            best_model = base_model
-            main_logger.error('Couldnt run tuning. Returns emply model.')
+            return best_model
         
+    except:
+        main_logger.error('failed to load, search, or tune the model. retry tuning.')
+         # grid search
+        best_model_grid, best_hparams_grid, rmsle_grid = load_or_run_grid_search(
+            X_train=X_train, X_val=X_val, y_train=y_train, y_val=y_val,
+            search_space=search_space_grid,
+            base_model=base_model,
+            model_name=model_name,
+        )
+
+        # bayesian optimization
+        best_model_bayesian, best_hparams_bayesian, rmsle_bayesian = load_or_run_bayesian_optimization(
+            X_train=X_train, X_val=X_val, y_train=y_train, y_val=y_val,
+            search_space=search_space_bayesian,
+            base_model=base_model,
+            model_name=model_name,
+        )
+
+        best_model = best_model_bayesian if rmsle_bayesian < rmsle_grid else best_model_grid # type: ignore
+        best_hparams = best_hparams_bayesian if rmsle_bayesian < rmsle_grid  else best_hparams_grid # type: ignore
+        sk.save_model(model=best_model, hparams=best_hparams, model_name=model_name, trig='best') # type: ignore
+
         return best_model
+        

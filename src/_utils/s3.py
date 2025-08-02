@@ -17,7 +17,7 @@ def s3_upload(file_path: str, file_name: str, prefix = S3_MODEL_PREFIX):
     if s3_client:
         s3_key = f"{prefix}_{file_name}"
         s3_client.upload_file(file_path, S3_BUCKET_NAME, s3_key)
-        main_logger.info(f"PyTorch model uploaded to s3://{S3_BUCKET_NAME}/{s3_key}")
+        main_logger.info(f"pytorch model uploaded to s3://{S3_BUCKET_NAME}/{s3_key}")
 
     else:
-        main_logger.error('Failed to create an S3 client.')
+        main_logger.error('failed to create an S3 client.')

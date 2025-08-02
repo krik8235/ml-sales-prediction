@@ -39,7 +39,7 @@ def handle_feature_engineering(df: pd.DataFrame, verbose: bool = False) -> pd.Da
     pd.set_option('future.no_silent_downcasting', True)
 
     if df is None or not isinstance(df, pd.DataFrame): 
-        main_logger.error("Need Pandas' DataFrame") 
+        main_logger.error("need pandas dataframe") 
         return None
 
 

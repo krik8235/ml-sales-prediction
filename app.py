@@ -1,4 +1,5 @@
 import os
+import json
 import datetime
 import warnings
 import torch
@@ -32,8 +33,17 @@ if AWS_LAMBDA_RUNTIME_API is None: load_dotenv(override=True)
 # flask app config
 app = Flask(__name__)
 app.config['CORS_HEADERS'] = 'Content-Type'
-origins = ['http://localhost:3000', os.environ.get('MY_WEB'), os.environ.get('PRODUCTION_API_ROUTE') ]
-cors = CORS(app, resources={r'/v1/*': { 'origins': origins, }})
+CLIENT_A =  os.environ.get('CLIENT_A')
+API_ENDPOINT = os.environ.get('API_ENDPOINT')
+origins = ['http://localhost:3000', CLIENT_A, API_ENDPOINT]
+CORS(
+    app,
+    origins=origins, 
+    methods=['GET', 'POST', 'OPTIONS'], 
+    headers=['Content-Type', 'X-Amz-Date', 'Authorization', 'X-Api-Key', 'X-Amz-Security-Token']
+)
+
+# cors = CORS(app, resources={r'/v1/*': { 'origins': origins, }})
 
 
 # global variables
@@ -69,13 +79,13 @@ def get_redis_client():
                 ssl_cert_reqs=None,
             )
             _redis_client.ping()
-            main_logger.info("Successfully connected to ElastiCache Redis Cluster (Configuration Endpoint)!")
+            main_logger.info("successfully connected to ElastiCache Redis Cluster (Configuration Endpoint)!")
         except redis.exceptions.ConnectionError as e:
-            main_logger.error(f"Could not connect to Redis Cluster: {e}", exc_info=True)
+            main_logger.error(f"could not connect to Redis Cluster: {e}", exc_info=True)
             _redis_client = None
             raise
         except Exception as e:
-            main_logger.error(f"An unexpected error occurred during Redis Cluster connection: {e}", exc_info=True)
+            main_logger.error(f"an unexpected error occurred during Redis Cluster connection: {e}", exc_info=True)
             _redis_client = None
             raise
     return _redis_client
@@ -124,7 +134,7 @@ load_artifacts()
 
 load_backup_model()
 
-# backup_model = ElasticNet(
+# backup_model_en = ElasticNet(
 #     alpha=0.00010076137476187376,
 #     l1_ratio=0.6001201735703293,
 #     max_iter=48953,
@@ -133,6 +143,7 @@ load_backup_model()
 #     fit_intercept=True,
 #     random_state=96
 # )
+# backup_model_gbm = {'boosting_type': np.str_('gbdt'), 'num_leaves': np.int64(500), 'max_depth': np.int64(15), 'min_child_samples': np.int64(5), 'min_child_weight': 10.0, 'learning_rate': 0.15268143909810017, 'n_estimators': np.int64(1856), 'subsample': 0.6, 'subsample_freq': np.int64(0), 'colsample_bytree': 1.0, 'reg_alpha': 0.0030312348222153655, 'reg_lambda': 10.0, 'random_state': np.int64(100), 'n_jobs': np.int64(-1)}
 
 
 @app.route('/')
@@ -141,11 +152,11 @@ def hello_world():
     if env == 'local': return """<p>Hello, world</p><p>I am an API endpoint.</p>"""
 
     data = request.json if request.is_json else request.data.decode('utf-8')
-    main_logger.info(f"Request received! ENV: {env}, Data: {data}")
+    main_logger.info(f"request received! ENV: {env}, Data: {data}")
     return jsonify({"message": f"Hello from Flask in Lambda! ENV: {env}", "received_data": data})
 
 
-@app.route('/v1/predict-price/<string:stockcode>', methods=['GET'])
+@app.route('/v1/predict-price/<string:stockcode>', methods=['GET', 'OPTION'])
 @cross_origin(origins=origins)
 def predict_price(stockcode):
     # create new dataframe
@@ -160,7 +171,7 @@ def predict_price(stockcode):
     if df_target_stockcode.empty:
         min_price = 2
         max_price = 20.0
-        main_logger.warning(f"No historical data found for stockcode: {stockcode}. Using default price range.")
+        main_logger.warning(f"no historical data found for stockcode: {stockcode}. use default price range.")
     else:
         min_price = max(df_target_stockcode['unitprice'].min(), 2)
         max_price = df_target_stockcode['unitprice'].max()
@@ -203,18 +214,20 @@ def predict_price(stockcode):
             y_pred = model(input_tensor)
             y_pred = y_pred.cpu().numpy().flatten()
             y_pred_actual = np.exp(y_pred)
+            main_logger.info(f"primary model's prediction for stockcode {stockcode} - actual sales ($) {y_pred_actual}")
 
-            main_logger.info(f"\nPrediction for stockcode {stockcode} - Atual Sales Predicted in $: {y_pred_actual}")
-
-    if np.isinf(y_pred_actual).any() or (y_pred_actual == 0.0).any() or y_pred_actual is None: # type: ignore   
-        if backup_model:
-            y_pred = backup_model.predict(X)
-            y_pred_actual = np.exp(y_pred)
-    
+            if np.isinf(y_pred_actual).any() or (y_pred_actual == 0.0).any() or y_pred_actual is None: # type: ignore   
+                if backup_model:
+                    y_pred = backup_model.predict(X)
+                    y_pred_actual = np.exp(y_pred)
+                    main_logger.info(f"backup model's prediction for stockcode {stockcode} - actual sales ($) {y_pred_actual}")
+        
     elif not model and backup_model:
         y_pred = backup_model.predict(X)
         y_pred_actual = np.exp(y_pred)
-      
+        main_logger.info(f"backup model's prediction for stockcode {stockcode} - actual sales ($) {y_pred_actual}")
+    
+
     if y_pred_actual is not None:
         new_df['sales'] =  y_pred_actual
         optimal_row = new_df.loc[new_df['sales'].idxmax()]
@@ -248,8 +261,6 @@ def add_header(response):
 
 
 def handler(event, context):
-    import json
-
     main_logger.info("lambda handler invoked.")
 
     try:

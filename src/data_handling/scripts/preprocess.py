@@ -22,7 +22,7 @@ def make_train_val_datasets(
     Makes train, validation, test datasets from the DataFrame
     """
 
-    if df is None: main_logger.error('Missing DataFrame')
+    if df is None: main_logger.error('no dataframe found.')
     X = df.copy().drop(columns=target_col)
     y = df.copy()[target_col]
 
@@ -31,7 +31,7 @@ def make_train_val_datasets(
 
     if verbose:
         main_logger.info(
-            f'Original Datasets\nX_train: {X_train.shape}, X_val: {X_val.shape}, X_test: {X_test.shape}, y_train: {y_train.shape}, y_val: {y_val.shape}, y_test: {y_test.shape}')
+            f'datasets created:\nX_train: {X_train.shape}, X_val: {X_val.shape}, X_test: {X_test.shape}, y_train: {y_train.shape}, y_val: {y_val.shape}, y_test: {y_test.shape}')
 
     return  X_train, X_val, X_test, y_train, y_val, y_test
 
@@ -72,18 +72,17 @@ def transform_input(
     X_test_processed = preprocessor.transform(X_test)
 
     if verbose:
-        main_logger.info(
-            f'Preprocessed input data: X_train: {X_train_processed.shape}, X_val: {X_val_processed.shape}, X_test: {X_test_processed.shape}')
+        main_logger.info(f'transformed input datasets: X_train: {X_train_processed.shape}, X_val: {X_val_processed.shape}, X_test: {X_test_processed.shape}')
 
     # raise error if nan or inf in the preprocessed data
     try:
         if np.isnan(X_train_processed).any(): # type: ignore
             nan_rows, nan_cols = np.where(np.isnan(X_train_processed))  # type: ignore
-            raise Exception(f"NaN found in X_train_processed\nSamples: rows={nan_rows[:5]}, cols={nan_cols[:5]}")
+            raise Exception(f"NaN found in X_train_processed\nsamples: rows={nan_rows[:5]}, cols={nan_cols[:5]}")
 
         if np.isinf(X_train_processed).any():  # type: ignore
             inf_rows, inf_cols = np.where(np.isinf(X_train_processed)) # type: ignore
-            raise Exception(f"Inf found in X_train_processed\nSamples: rows={inf_rows[:5]}, cols={inf_cols[:5]}")
+            raise Exception(f"Inf found in X_train_processed\nsamples: rows={inf_rows[:5]}, cols={inf_cols[:5]}")
     except:
         pass
     

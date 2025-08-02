@@ -56,13 +56,13 @@ def run_kfold_validation(
 
                 # check for nan of inf in predictions
                 if np.any(np.isnan(y_pred_val_kf)) or np.any(np.isinf(y_pred_val_kf)):
-                    main_logger.warning(f"Fold {fold}: Predictions contain NaN or Inf. Returning a high penalty MSE.")
+                    main_logger.warning(f"fold {fold}: predictions contain NaN or Inf. Returning a high penalty MSE.")
                     mses += 1e10
                 else:
                     mses += current_val_mse
 
             except Exception as e:
-                main_logger.error(f"Error during LightGBM training in fold {fold} with hparams {hparams}: {e}")
+                main_logger.error(f"error during LightGBM training in fold #{fold} with hparams {hparams}: {e}")
                 mses += 1e10 # add a large penalty for failed training
 
         else:
@@ -91,7 +91,7 @@ def run_kfold_validation(
                     break
             
             else:
-                main_logger.info(f"Fold {fold}: Max iterations ({max_iters}) reached. Best MSE: {best_val_mse:.4f}")
+                main_logger.info(f"fold #{fold}: Max iterations ({max_iters}) reached. Best MSE: {best_val_mse:.4f}")
 
             if best_model_state: model.set_params(**best_model_state)
                 # main_logger.info(f"Fold {fold}: Restored model to best state from iteration {best_iteration}.")
@@ -126,7 +126,7 @@ def grid_search(X_train, y_train, search_space: dict, base_model) -> tuple[Itera
 
     best_model = base_model(**best_hparams)
     best_model.fit(X_train, y_train)
-    main_logger.info(f'Best hparams:\n{best_hparams}\nBest MSE {best_mse:.4f}')
+    main_logger.info(f'best hparams:\n{best_hparams}\nbest MSE {best_mse:.4f}')
 
     return best_model, best_hparams, best_mse
 
@@ -153,6 +153,6 @@ def bayesian_optimization(X_train, y_train, space: list, base_model, n_calls=50)
     best_mse = results.fun # type: ignore
     best_model = base_model(**best_hparams)
 
-    main_logger.info(f'Best hparams:\n{best_hparams}\nBest MSE {best_mse:.4f}')
+    main_logger.info(f'best hparams:\n{best_hparams}\nbest MSE {best_mse:.4f}')
     
     return best_model, best_hparams, best_mse
