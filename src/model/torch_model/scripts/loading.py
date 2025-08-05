@@ -21,7 +21,7 @@ def construct_model_from_state(input_dim: int, state: dict):
     return model
 
 
-def load_model(input_dim=None, model_name: str = 'dfn', trig: str ='best') -> nn.Module:
+def load_model(input_dim=None, model_name: str = 'dfn', trig: str ='best', saved_state_dict=None) -> nn.Module:
     """
     Loads and returns the latest tensor model with a state dictionary for reconstruction.
     When failed to load the model, returns a new untrained model with a potentially emplty state dictionary.    
@@ -32,16 +32,17 @@ def load_model(input_dim=None, model_name: str = 'dfn', trig: str ='best') -> nn
         state_dict = model.state_dict()
     
         # load saved state dict (best performing model)
-        folder_path = os.path.join(MODEL_SAVE_PATH, f'{model_name}_{trig}')
-        file_path, _ = retrieve_file_path(folder_path=folder_path)
-        if not file_path: raise Exception('File path not found.')
-        saved_state_dict = torch.load(file_path)
+        if saved_state_dict is None:
+            folder_path = os.path.join(MODEL_SAVE_PATH, f'{model_name}_{trig}')
+            file_path, _ = retrieve_file_path(folder_path=folder_path)
+            if not file_path: raise Exception('File path not found.')
+            saved_state_dict = torch.load(file_path, weights_only=False)
 
         # create pretrained state dict and load it to the init model
         pretrained_dict = {k: v for k, v in saved_state_dict.items() if k in state_dict and v.shape == state_dict[k].shape}
         state_dict.update(pretrained_dict)
         model.load_state_dict(state_dict)
-
+        
         return model
     
     except Exception as e:

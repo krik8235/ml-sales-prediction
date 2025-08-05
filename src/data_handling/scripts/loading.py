@@ -5,6 +5,14 @@ import pandas as pd
 from src._utils import retrieve_file_path
 
 
+def sanitize_column_names(df):
+    for col in df.columns:
+        col_revised = col.replace(' ', '_').lower().replace('__', '_')
+        df[col_revised] = df[col]
+        df = df.drop(columns=col, axis='columns')
+    return df
+
+
 def load_original_dataframe() -> pd.DataFrame: # type: ignore
     """Downloads data from CSV file."""
 
@@ -13,10 +21,7 @@ def load_original_dataframe() -> pd.DataFrame: # type: ignore
     file_path = os.path.join(current_dir, 'data', 'raw', file_name)
     df = pd.read_csv(file_path)
 
-    for col in df.columns:
-        col_revised = col.replace(' ', '_').lower().replace('__', '_')
-        df[col_revised] = df[col]
-        df = df.drop(columns=col, axis='columns')
+    df = sanitize_column_names(df=df)
     return df
 
 
@@ -32,6 +37,7 @@ def load_post_feature_engineer_dataframe() -> tuple[pd.DataFrame, str , str]:
 
     try:
         df = pd.read_csv(file_path)
+        if 'Unnamed: 0' in df.columns: df = df.drop('Unnamed: 0', axis=1)
         return df, file_path, file_name
     
     except:

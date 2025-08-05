@@ -11,6 +11,10 @@ from category_encoders import BinaryEncoder # type: ignore
 from src._utils import main_logger
 
 
+os.makedirs('preprocessors', exist_ok=True)
+PREPROCESSOR_PATH = os.environ.get('PREPROCESSOR_PATH')       
+
+
 def make_train_val_datasets(
         df: pd.DataFrame,
         target_col: str = 'sales',
@@ -33,13 +37,10 @@ def make_train_val_datasets(
         main_logger.info(
             f'datasets created:\nX_train: {X_train.shape}, X_val: {X_val.shape}, X_test: {X_test.shape}, y_train: {y_train.shape}, y_val: {y_val.shape}, y_test: {y_test.shape}')
 
-    return  X_train, X_val, X_test, y_train, y_val, y_test
+    return  X_train, X_val, X_test, y_train, y_val, y_test, X, y
 
 
-def handle_preprocessor(num_cols, cat_cols):
-    os.makedirs('preprocessors', exist_ok=True)
-    PREPROCESSOR_PATH = os.environ.get('PREPROCESSOR_PATH')       
-
+def fetch_unfit_preprocessor(num_cols, cat_cols):
     try:
         preprocessor = joblib.load(PREPROCESSOR_PATH)
 
@@ -53,8 +54,7 @@ def handle_preprocessor(num_cols, cat_cols):
             ],
             remainder='passthrough' 
         )
-        joblib.dump(preprocessor, PREPROCESSOR_PATH)
-
+        # joblib.dump(preprocessor, PREPROCESSOR_PATH)
     return preprocessor
 
 
@@ -65,7 +65,7 @@ def transform_input(
         verbose: bool = True,
     ) -> tuple:
 
-    preprocessor = handle_preprocessor(num_cols=num_cols, cat_cols=cat_cols)
+    preprocessor = fetch_unfit_preprocessor(num_cols=num_cols, cat_cols=cat_cols)
 
     X_train_processed = preprocessor.fit_transform(X_train)
     X_val_processed = preprocessor.transform(X_val)
@@ -86,7 +86,7 @@ def transform_input(
     except:
         pass
     
-    return  X_train_processed, X_val_processed, X_test_processed
+    return  X_train_processed, X_val_processed, X_test_processed, preprocessor
 
 
 def transform_target(y_train, y_val, y_test, scaler=None) -> tuple:

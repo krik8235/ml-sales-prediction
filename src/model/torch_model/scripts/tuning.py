@@ -372,7 +372,8 @@ def bayesian_optimization(X_train, X_val, y_train, y_val) -> tuple[nn.Module, di
             trial.report(val_loss, epoch)
             if trial.should_prune(): raise optuna.exceptions.TrialPruned()
             
-            main_logger.info(f'Epoch {epoch} - Loss: {val_loss:.4f}')
+            if epoch % 10 == 0:
+                main_logger.info(f'Epoch {epoch} - Loss: {val_loss:.4f}')
         
         return best_val_loss
 

@@ -118,7 +118,7 @@ def handle_feature_engineering(df: pd.DataFrame, verbose: bool = False) -> pd.Da
 
 
     # imputation & data type transformation
-    df_fin['customerid'] = df_fin['stockcode'].fillna(value='unknown')
+    df_fin['customerid'] = df_fin['customerid'].fillna(value='unknown')
     df_fin['stockcode'] = df_fin['stockcode'].fillna(value='unknown')
     df_fin['invoiceno'] = df_fin['invoiceno'].fillna(value='unknown')
     df_fin['quantity'] = df_fin['quantity'].fillna(value=np.floor(df_fin['sales'] / df_fin['unitprice'])) # type: ignore

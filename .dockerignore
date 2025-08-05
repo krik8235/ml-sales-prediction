@@ -16,10 +16,13 @@ tmp/
 awscli-bundle/
 
 # only containalizes the best performing models
+dfn_best/
 dfn_bayesian/
 dfn_grid/
+en_best/
 en_bayesian/
 en_grid/
+gbm_best/
 gbm_bayesian/
 gbm_grid/
 
@@ -27,3 +30,5 @@ gbm_grid/
 .legacy/
 
 notebooks/
+
+data/

@@ -2,11 +2,14 @@ import numpy as np
 import pandas as pd
 from itertools import product
 from typing import Iterable
+from sklearn.linear_model import ElasticNet
 from sklearn.model_selection import KFold
 from sklearn.metrics import mean_squared_error
 from skopt import gp_minimize # type: ignore
 import lightgbm as lgb  # type: ignore
 
+from src.model.sklearn_model.scripts.predict import make_prediction
+from src.model.sklearn_model.scripts.saving import save_model_to_local
 from src._utils import main_logger
 
 import warnings
@@ -103,7 +106,8 @@ def run_kfold_validation(
     return ave_mse
 
 
-def grid_search(X_train, y_train, search_space: dict, base_model) -> tuple[Iterable, dict, float]:
+# grid search
+def _grid_search(X_train, y_train, search_space: dict, base_model) -> tuple[Iterable, dict, float]:
     """Finds optimal hyperparameters via Grid Search and returns trained optimal model, hyperparameters, and best MSE."""
 
     keys, values = search_space.keys(), search_space.values()
@@ -131,7 +135,42 @@ def grid_search(X_train, y_train, search_space: dict, base_model) -> tuple[Itera
     return best_model, best_hparams, best_mse
 
 
-def bayesian_optimization(X_train, y_train, space: list, base_model, n_calls=50) -> tuple[Iterable, dict, float]:
+def run_grid_search(
+        X_train, X_val, y_train, y_val,
+        search_space: dict,
+        base_model,
+        model_name: str = 'en'
+    ):
+
+    best_model, best_hparams, _ = _grid_search(X_train, y_train, search_space=search_space, base_model=base_model)
+
+    if not best_model and best_hparams:
+        best_model = base_model(**best_hparams)
+
+    if best_model:
+        main_logger.info('successfully load the model (grid search)')
+        match model_name:
+            case 'gbm':
+                best_model.fit( # type: ignore
+                    X_train, y_train, 
+                    eval_set=[(X_val, y_val)], eval_metric='l2', callbacks=[lgb.early_stopping(10, verbose=False)] # type: ignore
+                )
+            case _:
+                best_model.fit(X_train, y_train) # type: ignore
+
+        _, _, _, rmsle = make_prediction(model=best_model, X=X_val, y=y_val)
+        save_model_to_local(model=best_model, hparams=best_hparams, model_name=model_name, trig='grid') # type: ignore
+    
+
+    else:
+        main_logger.error('failed to complete the grid search. return emply model')
+        best_model = ElasticNet() if model_name == 'en' else lgb.LGBMRegressor()
+
+    return best_model, best_hparams, rmsle
+
+
+# bayesian optimization
+def _bayesian_optimization(X_train, y_train, space: list, base_model, n_calls=50) -> tuple[Iterable, dict, float]:
     # @use_named_args(space)
     def objective(params, X_train, y_train, base_model, hparam_names):
         hparams = {item: params[i] for i, item in enumerate(hparam_names)}
@@ -156,3 +195,36 @@ def bayesian_optimization(X_train, y_train, space: list, base_model, n_calls=50)
     main_logger.info(f'best hparams:\n{best_hparams}\nbest MSE {best_mse:.4f}')
     
     return best_model, best_hparams, best_mse
+
+
+def run_bayesian_optimization(
+        X_train, X_val, y_train, y_val, 
+        search_space: list, 
+        base_model, 
+        model_name: str = 'en'
+    ):
+
+    best_model, best_hparams, _ = _bayesian_optimization(X_train, y_train, space=search_space, base_model=base_model)
+
+    if not best_model and best_hparams:
+        best_model = base_model(**best_hparams)
+
+    if best_model:
+        main_logger.info('successfully load the model (bayesian optimization)')
+        match model_name:
+            case 'gbm':
+                best_model.fit( # type: ignore
+                    X_train, y_train, 
+                    eval_set=[(X_val, y_val)], eval_metric='l2', callbacks=[lgb.early_stopping(10, verbose=False)] # type: ignore
+                )
+            case _:
+                best_model.fit(X_train, y_train) # type: ignore
+
+        _, _, _, rmsle = make_prediction(model=best_model, X=X_val, y=y_val)
+        save_model_to_local(model=best_model, hparams=best_hparams, model_name=model_name, trig='bayesian') # type: ignore
+
+    else:
+        main_logger.error('failed to complete bayesian optimization. return emply model')
+        best_model = ElasticNet() if model_name == 'en' else lgb.LGBMRegressor()
+       
+    return best_model, best_hparams, rmsle

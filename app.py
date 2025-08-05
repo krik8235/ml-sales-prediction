@@ -2,24 +2,25 @@ import os
 import json
 import datetime
 import warnings
+import hashlib
 import torch
+import pickle
 import pandas as pd
 import numpy as np
-from dotenv import load_dotenv # type: ignore
+import awsgi # type: ignore
 import joblib
 import redis # type: ignore
 import redis.cluster # type: ignore
 from redis.cluster import ClusterNode # type: ignore
 from flask import Flask, request, jsonify # type: ignore
 from flask import Flask, request, jsonify # type: ignore
-from flask_cors import CORS, cross_origin
+from flask_cors import cross_origin
 from waitress import serve
-import awsgi # type: ignore
+from dotenv import load_dotenv # type: ignore
 
-import src.model.torch_model.scripts as t
-import src.model.sklearn_model.scripts as sk
+import src.model.torch_model as t
 import src.data_handling as data_handling
-from src._utils import main_logger
+from src._utils import main_logger, s3_load, S3_BUCKET_NAME, s3_upload
 
 # silence warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -33,26 +34,28 @@ if AWS_LAMBDA_RUNTIME_API is None: load_dotenv(override=True)
 # flask app config
 app = Flask(__name__)
 app.config['CORS_HEADERS'] = 'Content-Type'
+
 CLIENT_A =  os.environ.get('CLIENT_A')
 API_ENDPOINT = os.environ.get('API_ENDPOINT')
 origins = ['http://localhost:3000', CLIENT_A, API_ENDPOINT]
-CORS(
-    app,
-    origins=origins, 
-    methods=['GET', 'POST', 'OPTIONS'], 
-    headers=['Content-Type', 'X-Amz-Date', 'Authorization', 'X-Api-Key', 'X-Amz-Security-Token']
-)
-
-# cors = CORS(app, resources={r'/v1/*': { 'origins': origins, }})
 
 
 # global variables
 _redis_client = None
-model = None
-preprocessor = None
-backup_model = None
 original_df = None
-preprocessed_df = None
+preprocessor = None
+model = None
+backup_model = None
+
+
+# file path
+PRODUCTION_MODEL_FOLDER_PATH = 'models/production'
+DFN_FILE_PATH = os.path.join(PRODUCTION_MODEL_FOLDER_PATH, 'dfn_best.pth')
+GBM_FILE_PATH =  os.path.join(PRODUCTION_MODEL_FOLDER_PATH, 'gbm_best.pth')
+EN_FILE_PATH = os.path.join(PRODUCTION_MODEL_FOLDER_PATH, 'en_best.pth')
+
+PREPROCESSOR_PATH = 'preprocessors/column_transformer.pkl'
+ORIGINAL_DF_PATH = os.environ.get('ORIGINAL_DF_PATH')
 
 
 def get_redis_client():
@@ -92,58 +95,76 @@ def get_redis_client():
 
 
 def load_artifacts():
-    global model, preprocessor, original_df, preprocessed_df
+    global model, preprocessor, original_df
 
-    # load df
-    main_logger.info('loading original dataframe...')
-    original_df = data_handling.scripts.load_original_dataframe()
-    preprocessed_df, _, _ = data_handling.scripts.load_post_feature_engineer_dataframe()
-    preprocessed_df = preprocessed_df.drop('Unnamed: 0', axis=1)
-
-    # load the trained PyTorch model
-    main_logger.info("loading model...")
-    input_dim = 59
-    model = t.load_model(input_dim=input_dim, trig='grid')
-    model.eval()
-
-    main_logger.info("loading pre-processing artifacts...")
-    PREPROCESSOR_PATH = os.environ.get('PREPROCESSOR_PATH', None)
-    target_col = 'sales'
-    if PREPROCESSOR_PATH and os.path.exists(PREPROCESSOR_PATH):
-        preprocessor = joblib.load(PREPROCESSOR_PATH)
-    else:
-        num_cols, cat_cols = data_handling.scripts.categorize_num_cat_cols(df=preprocessed_df, target_col=target_col)
-        preprocessor = data_handling.scripts.handle_preprocessor(num_cols=num_cols, cat_cols=cat_cols)
+    try:
+        # load the original dataframe
+        main_logger.info("... loading original dataframe ...")
+        original_df = data_handling.scripts.load_original_dataframe()
         
-    X_train = preprocessed_df.copy().drop(target_col, axis=1)
-    preprocessor.fit(X_train)
+        # load trained processor
+        main_logger.info("... loading pre-processing artifacts...")
+        try:
+            preprocessor_file_path = s3_load(PREPROCESSOR_PATH)
+            preprocessor = joblib.load(preprocessor_file_path)
+        except:
+            preprocessor = joblib.load(PREPROCESSOR_PATH)
+
+        # load pytorch model
+        main_logger.info("... loading pytorch model...")
+        input_dim = 59
+        model_io_file = s3_load(file_path=DFN_FILE_PATH)
+
+        if model_io_file is not None:
+            state_dict = torch.load(model_io_file, weights_only=False)
+            model = t.scripts.load_model(input_dim=input_dim, trig='best', saved_state_dict=state_dict)
+            # model.eval()
+            # model = torch.load(model_file, weights_only=False) if not S3_BUCKET_NAME else torch.load(model_file, weights_only=False)
+            model.eval()
+        else:
+            model = t.scripts.load_model(input_dim=input_dim, trig='best')
+            model.eval()
+
+    except Exception as e:
+        main_logger.critical(f"failed to load one or more essential artifacts during cold start: {e}", exc_info=True)
+        raise RuntimeError("flask application failed to initialize due to missing or invalid model artifacts.")
 
 
 def load_backup_model():
     global backup_model
+    model_data_bytes_io = None
+    
     try:
-        backup_model, _ = sk.load_model(model_name='gbm', trig='best')
+        main_logger.info('... loading gbm ...')
+        model_data_bytes_io = s3_load(file_path=GBM_FILE_PATH)
+
+        if model_data_bytes_io:
+            model_data_bytes_io.seek(0)
+            loaded_dict = pickle.load(model_data_bytes_io)
+            backup_model = loaded_dict['best_model']
+            main_logger.info("successfully loaded gbm.")
+            return
+
     except:
+        main_logger.error(f"failed to load gbm from s3 using pickle. try loading elastic net instead as a backup model.")
+        
         try:
-            backup_model, _ = sk.load_model(model_name='en', trig='best')
-        except:
-            backup_model = None
+            main_logger.info('... loading en ...')
+            model_data_bytes_io = s3_load(file_path=EN_FILE_PATH)
+            if model_data_bytes_io:
+                model_data_bytes_io.seek(0)
+                loaded_dict = pickle.load(model_data_bytes_io)
+                backup_model = loaded_dict['best_model']
+                main_logger.info("successfully loaded elastic net.")
+                return
 
+        except Exception as e:
+            main_logger.critical(f"failed to load elastic net from s3 using pickle: {e}")
 
-load_artifacts()
-
-load_backup_model()
-
-# backup_model_en = ElasticNet(
-#     alpha=0.00010076137476187376,
-#     l1_ratio=0.6001201735703293,
-#     max_iter=48953,
-#     tol=1.8200116325906476e-05,
-#     selection='random',
-#     fit_intercept=True,
-#     random_state=96
-# )
-# backup_model_gbm = {'boosting_type': np.str_('gbdt'), 'num_leaves': np.int64(500), 'max_depth': np.int64(15), 'min_child_samples': np.int64(5), 'min_child_weight': 10.0, 'learning_rate': 0.15268143909810017, 'n_estimators': np.int64(1856), 'subsample': 0.6, 'subsample_freq': np.int64(0), 'colsample_bytree': 1.0, 'reg_alpha': 0.0030312348222153655, 'reg_lambda': 10.0, 'random_state': np.int64(100), 'n_jobs': np.int64(-1)}
+try:
+    load_artifacts()
+except:
+    load_backup_model()
 
 
 @app.route('/')
@@ -156,12 +177,22 @@ def hello_world():
     return jsonify({"message": f"Hello from Flask in Lambda! ENV: {env}", "received_data": data})
 
 
+
 @app.route('/v1/predict-price/<string:stockcode>', methods=['GET', 'OPTION'])
-@cross_origin(origins=origins)
+@cross_origin(origins=origins, methods=['GET', 'OPTION'], supports_credentials=True)
 def predict_price(stockcode):
-    # create new dataframe
-    try: data = request.json
-    except: data = None
+    data = request.json if request.is_json else {}
+
+    # fetch cached results if any
+    if _redis_client is not None:
+        params_hash = hashlib.sha256(str(sorted(data.items())).encode()).hexdigest()
+        cache_key = f"prediction:{stockcode}:{params_hash}"
+
+        cached_result = _redis_client.get(cache_key)
+        if cached_result:
+            main_logger.info(f"cache hit for stockcode: {stockcode}")
+            return jsonify(json.loads(cached_result))
+    
 
     NUM_PRICE_BINS = data.get('num_price_bins', 12) if data else 12
 
@@ -222,10 +253,11 @@ def predict_price(stockcode):
                     y_pred_actual = np.exp(y_pred)
                     main_logger.info(f"backup model's prediction for stockcode {stockcode} - actual sales ($) {y_pred_actual}")
         
-    elif not model and backup_model:
-        y_pred = backup_model.predict(X)
-        y_pred_actual = np.exp(y_pred)
-        main_logger.info(f"backup model's prediction for stockcode {stockcode} - actual sales ($) {y_pred_actual}")
+    else:
+        if backup_model:
+            y_pred = backup_model.predict(X)
+            y_pred_actual = np.exp(y_pred)
+            main_logger.info(f"backup model's prediction for stockcode {stockcode} - actual sales ($) {y_pred_actual}")
     
 
     if y_pred_actual is not None:
@@ -245,18 +277,24 @@ def predict_price(stockcode):
             }
             all_outputs.append(current_output)
 
+        # store cached results
+        if _redis_client is not None:
+            result_json = json.dumps(all_outputs)
+            _redis_client.set(cache_key, result_json, ex=3600)
+
         return jsonify(all_outputs)
     
     else:
         return jsonify([])
 
-        # yield json.dumps(current_output) + '\n'
-    # return Response(generate_predictions_stream(), mimetype='application/json') 
 
 @app.after_request
 def add_header(response):   
-    # response.headers['X-UA-Compatible'] = 'IE=Edge,chrome=1'
     response.headers['Cache-Control'] = 'public, max-age=0'
+    response.headers['Access-Control-Allow-Origin'] = CLIENT_A
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,Origin'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    response.headers['Access-Control-Allow-Credentials'] = 'true'
     return response
 
 
