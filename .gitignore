@@ -25,3 +25,6 @@ awscli-bundle/
 preprocessors/
 
 notebooks/
+feature_engineering.ipynb
+
+sales-pred/

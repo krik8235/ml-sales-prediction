@@ -1,12 +1,12 @@
 import os
 import pandas as pd
 
-os.makedirs('data', exist_ok=True)
-os.makedirs('data/processed', exist_ok=True)
-
 
 def save_df_to_csv(df: pd.DataFrame) -> tuple[str, str]: # type: ignore
     """save dataframe to csv file and returns file_path and file name"""
+
+    os.makedirs('data', exist_ok=True)
+    os.makedirs('data/processed', exist_ok=True)
 
     if df is None: raise Exception('Dataframe is missing')
     

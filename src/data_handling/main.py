@@ -20,6 +20,8 @@ def reconstruct_dataframe(original_df: pd.DataFrame, new_df_to_add: pd.DataFrame
 
 
 def main_script(is_scale: bool = True, verbose: bool = False):
+    preprocessor = None
+
     try:
         df, _, _ = scripts.load_post_feature_engineer_dataframe()
     except:
@@ -30,7 +32,7 @@ def main_script(is_scale: bool = True, verbose: bool = False):
     
     if 'Unnamed: 0' in df.columns: df = df.drop('Unnamed: 0', axis=1)
 
-    target_col = 'sales'
+    target_col = 'quantity'
     num_cols, cat_cols = scripts.categorize_num_cat_cols(df=df, target_col=target_col)
     if verbose: main_logger.info(f'num_cols: {num_cols} \ncat_cols: {cat_cols}')
 
@@ -47,6 +49,7 @@ def main_script(is_scale: bool = True, verbose: bool = False):
 
     if np.isnan(X_train).any(): main_logger.error("NaNs found in scaled data")
     if np.isinf(X_train).any(): main_logger.error("Infs found in scaled data")
-
-    if preprocessor: preprocessor.fit(X)
+  
+    if preprocessor is not None: preprocessor.fit(X)
+    
     return X_train, X_val, X_test, y_train, y_val, y_test, preprocessor

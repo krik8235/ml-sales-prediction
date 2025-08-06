@@ -19,6 +19,6 @@ def make_prediction(model, X, y) -> tuple[np.ndarray, float, float, float]:
     exp_mae = mean_absolute_error(np.exp(clipped_targets), np.exp(clipped_preds))
     rmsle = root_mean_squared_log_error(np.exp(clipped_targets), np.exp(clipped_preds))
 
-    main_logger.info(f'MSE for logged sales: {mse:,.4f}, MAE for actual sales: $ {exp_mae:,.4f}, RMSLE for actual sales: {rmsle:,.4f}')
+    main_logger.info(f'MSE for logged sales: {mse:,.4f}, MAE for actual quanity: {exp_mae:,.4f} units, RMSLE for actual quanity: {rmsle:,.4f}')
 
     return y_pred, mse, exp_mae, rmsle

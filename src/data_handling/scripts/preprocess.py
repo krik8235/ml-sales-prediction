@@ -11,13 +11,9 @@ from category_encoders import BinaryEncoder # type: ignore
 from src._utils import main_logger
 
 
-os.makedirs('preprocessors', exist_ok=True)
-PREPROCESSOR_PATH = os.environ.get('PREPROCESSOR_PATH')       
-
-
 def make_train_val_datasets(
         df: pd.DataFrame,
-        target_col: str = 'sales',
+        target_col: str = 'quantity',
         test_size: int = 50000,
         random_state: int = 42,
         verbose: bool = False,
@@ -41,6 +37,9 @@ def make_train_val_datasets(
 
 
 def fetch_unfit_preprocessor(num_cols, cat_cols):
+    os.makedirs('preprocessors', exist_ok=True)
+    PREPROCESSOR_PATH = os.environ.get('PREPROCESSOR_PATH')
+    
     try:
         preprocessor = joblib.load(PREPROCESSOR_PATH)
 

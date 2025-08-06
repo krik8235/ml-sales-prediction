@@ -131,11 +131,20 @@ def handle_feature_engineering(df: pd.DataFrame, verbose: bool = False) -> pd.Da
     df_fin_log = df_fin.copy()
     df_fin_log['is_return'] = (df_fin_log['sales'] < 0).astype(int)
     df_fin_log['quantity'] = np.where(df_fin_log['is_return'] == 1, 0, df_fin_log['quantity'])
-    df_fin_log['sales'] = df_fin_log['sales'].apply(lambda x: max(x, 0))
 
-    # transform sales to logged sales
+    # transform quantity to logged values
     alpha = 1
-    df_fin_log['sales'] = np.log(df_fin_log['sales'] + alpha)
+    df_fin_log['quantity'] = np.log(df_fin_log['quantity'] + alpha)
+
+    # drop sales column
+    df_fin_log = df_fin.drop(columns=['sales'], axis='columns')
+    
+
+    # df_fin_log['sales'] = df_fin_log['sales'].apply(lambda x: max(x, 0))
+
+    # # transform sales to logged sales
+    # alpha = 1
+    # df_fin_log['sales'] = np.log(df_fin_log['sales'] + alpha)
     
     if verbose: main_logger.info(df_fin.info())
     return df_fin_log

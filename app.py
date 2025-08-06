@@ -97,6 +97,9 @@ def get_redis_client():
 def load_artifacts():
     global model, preprocessor, original_df
 
+    device_type = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
+    device = torch.device(device_type)
+
     try:
         # load the original dataframe
         main_logger.info("... loading original dataframe ...")
@@ -116,10 +119,8 @@ def load_artifacts():
         model_io_file = s3_load(file_path=DFN_FILE_PATH)
 
         if model_io_file is not None:
-            state_dict = torch.load(model_io_file, weights_only=False)
+            state_dict = torch.load(model_io_file, weights_only=False, map_location=device)
             model = t.scripts.load_model(input_dim=input_dim, trig='best', saved_state_dict=state_dict)
-            # model.eval()
-            # model = torch.load(model_file, weights_only=False) if not S3_BUCKET_NAME else torch.load(model_file, weights_only=False)
             model.eval()
         else:
             model = t.scripts.load_model(input_dim=input_dim, trig='best')
@@ -187,7 +188,6 @@ def predict_price(stockcode):
     if _redis_client is not None:
         params_hash = hashlib.sha256(str(sorted(data.items())).encode()).hexdigest()
         cache_key = f"prediction:{stockcode}:{params_hash}"
-
         cached_result = _redis_client.get(cache_key)
         if cached_result:
             main_logger.info(f"cache hit for stockcode: {stockcode}")
@@ -213,24 +213,27 @@ def predict_price(stockcode):
         min_price, max_price = max_price, min_price
 
     price_range = np.linspace(min_price, max_price, NUM_PRICE_BINS)
-    mean_quantity = df_target_stockcode['quantity'].median()
+
+    # mean_quantity = df_target_stockcode['quantity'].median()
     country = df_target_stockcode['country'].mode().iloc[0]   
     new_data = {
         'invoicedate': np.datetime64(datetime.datetime.now()),
         'invoiceno': [data.get('invoiceno', np.nan) if data else np.nan] * NUM_PRICE_BINS,
         'stockcode': [stockcode] * NUM_PRICE_BINS,
         'description': [np.nan] * NUM_PRICE_BINS,
-        'quantity': [np.int64(data.get('quantity', mean_quantity) if data else mean_quantity)] * NUM_PRICE_BINS,
+        # 'quantity': [np.int64(data.get('quantity', np.nan) if data else np.nan)] * NUM_PRICE_BINS,
         'customerid': [np.nan] * NUM_PRICE_BINS,
         'country': [data.get('country', country) if data else country] * NUM_PRICE_BINS,
         'unitprice': price_range
     }
     new_df = pd.DataFrame(new_data)
-    df = pd.concat([original_df, new_df], ignore_index=True)
+    df = pd.concat([
+        # original_df, 
+        new_df], ignore_index=True)
     df = data_handling.scripts.structure_missing_values(df=df)
     df = data_handling.scripts.handle_feature_engineering(df=df)
 
-    target_col = 'sales'  
+    target_col = 'quantity'
     X = df.copy().drop(target_col, axis=1)
     X = X.tail(NUM_PRICE_BINS)
 
@@ -241,23 +244,23 @@ def predict_price(stockcode):
     if model:
         input_tensor = torch.tensor(X, dtype=torch.float32)
         model.eval()
-        with torch.no_grad():
+        with torch.inference_mode():
             y_pred = model(input_tensor)
             y_pred = y_pred.cpu().numpy().flatten()
             y_pred_actual = np.exp(y_pred)
-            main_logger.info(f"primary model's prediction for stockcode {stockcode} - actual sales ($) {y_pred_actual}")
+            main_logger.info(f"primary model's prediction for stockcode {stockcode} -  actual quantity (units) {y_pred_actual}")
 
             if np.isinf(y_pred_actual).any() or (y_pred_actual == 0.0).any() or y_pred_actual is None: # type: ignore   
                 if backup_model:
                     y_pred = backup_model.predict(X)
                     y_pred_actual = np.exp(y_pred)
-                    main_logger.info(f"backup model's prediction for stockcode {stockcode} - actual sales ($) {y_pred_actual}")
+                    main_logger.info(f"backup model's prediction for stockcode {stockcode} -  actual quantity (units) {y_pred_actual}")
         
     else:
         if backup_model:
             y_pred = backup_model.predict(X)
             y_pred_actual = np.exp(y_pred)
-            main_logger.info(f"backup model's prediction for stockcode {stockcode} - actual sales ($) {y_pred_actual}")
+            main_logger.info(f"backup model's prediction for stockcode {stockcode} -  actual quantity (units) {y_pred_actual}")
     
 
     if y_pred_actual is not None:

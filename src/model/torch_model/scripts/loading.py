@@ -6,10 +6,13 @@ from src.model.torch_model.scripts.pretrained_base import DFN
 from src._utils import main_logger, MODEL_SAVE_PATH, retrieve_file_path
 
 
+device_type = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
+device = torch.device(device_type)
+
+
 def construct_model_from_state(input_dim: int, state: dict):
     """Reconstruct a torch model from a state """
     
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model =  DFN(input_dim=input_dim)
 
     try:
@@ -36,13 +39,12 @@ def load_model(input_dim=None, model_name: str = 'dfn', trig: str ='best', saved
             folder_path = os.path.join(MODEL_SAVE_PATH, f'{model_name}_{trig}')
             file_path, _ = retrieve_file_path(folder_path=folder_path)
             if not file_path: raise Exception('File path not found.')
-            saved_state_dict = torch.load(file_path, weights_only=False)
+            saved_state_dict = torch.load(file_path, weights_only=False, map_location=device)
 
         # create pretrained state dict and load it to the init model
         pretrained_dict = {k: v for k, v in saved_state_dict.items() if k in state_dict and v.shape == state_dict[k].shape}
         state_dict.update(pretrained_dict)
         model.load_state_dict(state_dict)
-        
         return model
     
     except Exception as e:

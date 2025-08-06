@@ -97,43 +97,30 @@ if __name__ == '__main__':
 
     # create train, val, test datasets
     X_train, X_val, X_test, y_train, y_val, y_test, preprocessor = data_handling.main_script()
-    X = np.concatenate([X_train, X_val, X_test], axis=0)
-    y = np.concatenate([y_train, y_val, y_test], axis=0)
 
-    # torch dfn (tuning)
-    best_dfn = t.main_script(X_train, X_val, X_test, y_train, y_val, y_test)    
-    model = t.scripts.load_model(input_dim=X.shape[1], saved_state_dict=best_dfn.state_dict())
-    torch.save(model.state_dict(), DFN_FILE_PATH)
-    s3_upload(file_path=DFN_FILE_PATH)
-
-
-    # elastic net
-    best_en, best_hparams_en = sk.main_script(X_train, X_val, y_train, y_val, **sklearn_models[0])
-
-    if best_en is not None:
-        best_en.fit(X, y) # type: ignore
-        with open(EN_FILE_PATH, 'wb') as f:
-            pickle.dump({ 'best_model': best_en, 'best_hparams': best_hparams_en }, f)
-        
-        s3_upload(file_path=EN_FILE_PATH)
-
-    # light gbm
-    X_train, X_val, X_test, y_train, y_val, y_test, _ = data_handling.main_script(is_scale=False)
-    best_gbm, best_hparams_gbm = sk.main_script(X_train, X_val, y_train, y_val, **sklearn_models[1])
-
-    if best_gbm is not None:
-        best_gbm.fit( # type: ignore
-            X, y,
-            eval_set=[(X_val, y_val)],  # type: ignore
-            eval_metric='l2', # type: ignore
-            callbacks=[lgb.early_stopping(10, verbose=False)] # type: ignore
-        )
-        with open(GBM_FILE_PATH, 'wb') as f:
-            pickle.dump({'best_model': best_gbm, 'best_hparams': best_hparams_gbm }, f)
-        
-        s3_upload(file_path=GBM_FILE_PATH)
-
-    
     # processor
     joblib.dump(preprocessor, PREPROCESSOR_PATH)
     s3_upload(PREPROCESSOR_PATH)
+
+
+    # # torch dfn (tuning -> save best ver. to local + s3)
+    # best_dfn_full_trained = t.main_script(X_train, X_val, X_test, y_train, y_val, y_test)
+    # torch.save(best_dfn_full_trained.state_dict(), DFN_FILE_PATH)
+    # s3_upload(file_path=DFN_FILE_PATH)
+
+    # elastic net
+    best_en_trained, best_hparams_en = sk.main_script(X_train, X_val, X_test, y_train, y_val, y_test, **sklearn_models[0])
+    if best_en_trained is not None:
+        with open(EN_FILE_PATH, 'wb') as f:
+            pickle.dump({ 'best_model': best_en_trained, 'best_hparams': best_hparams_en }, f)
+        s3_upload(file_path=EN_FILE_PATH)
+
+    # # light gbm
+    # X_train, X_val, X_test, y_train, y_val, y_test, _ = data_handling.main_script(is_scale=False)
+    # best_gbm_trained, best_hparams_gbm = sk.main_script(X_train, X_val, X_test, y_train, y_val, y_test, **sklearn_models[1])
+
+    # if best_gbm_trained is not None:
+    #     with open(GBM_FILE_PATH, 'wb') as f:
+    #         pickle.dump({'best_model': best_gbm_trained, 'best_hparams': best_hparams_gbm }, f)
+        
+    #     s3_upload(file_path=GBM_FILE_PATH)

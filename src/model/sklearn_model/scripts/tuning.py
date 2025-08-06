@@ -1,12 +1,13 @@
 import numpy as np
 import pandas as pd
-from itertools import product
+import lightgbm as lgb  # type: ignore
 from typing import Iterable
+from itertools import product
+from functools import partial
 from sklearn.linear_model import ElasticNet
 from sklearn.model_selection import KFold
 from sklearn.metrics import mean_squared_error
 from skopt import gp_minimize # type: ignore
-import lightgbm as lgb  # type: ignore
 
 from src.model.sklearn_model.scripts.predict import make_prediction
 from src.model.sklearn_model.scripts.saving import save_model_to_local
@@ -34,7 +35,7 @@ def run_kfold_validation(
     kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
 
     for fold, (train_index, val_index) in enumerate(kf.split(X_train)):
-        if fold == 0: main_logger.info(f'Hyperparameters to test: {hparams}')
+        if fold == 0: main_logger.info(f'hyperparameters to test: {hparams}')
 
         X_train_fold, X_val_fold = X_train.iloc[train_index], X_train.iloc[val_index]
         y_train_fold, y_val_fold = y_train.iloc[train_index], y_train.iloc[val_index]
@@ -59,7 +60,7 @@ def run_kfold_validation(
 
                 # check for nan of inf in predictions
                 if np.any(np.isnan(y_pred_val_kf)) or np.any(np.isinf(y_pred_val_kf)):
-                    main_logger.warning(f"fold {fold}: predictions contain NaN or Inf. Returning a high penalty MSE.")
+                    main_logger.warning(f"fold # {fold}: predictions contain NaN or Inf. Returning a high penalty MSE.")
                     mses += 1e10
                 else:
                     mses += current_val_mse
@@ -159,8 +160,6 @@ def run_grid_search(
                 best_model.fit(X_train, y_train) # type: ignore
 
         _, _, _, rmsle = make_prediction(model=best_model, X=X_val, y=y_val)
-        save_model_to_local(model=best_model, hparams=best_hparams, model_name=model_name, trig='grid') # type: ignore
-    
 
     else:
         main_logger.error('failed to complete the grid search. return emply model')
@@ -177,7 +176,6 @@ def _bayesian_optimization(X_train, y_train, space: list, base_model, n_calls=50
         ave_mse = run_kfold_validation(X_train=X_train, y_train=y_train, base_model=base_model, hparams=hparams)
         return ave_mse
     
-    from functools import partial
     hparam_names = [s.name for s in space]
     objective_partial = partial(objective, X_train=X_train, y_train=y_train, base_model=base_model, hparam_names=hparam_names)
     results = gp_minimize(
@@ -221,7 +219,6 @@ def run_bayesian_optimization(
                 best_model.fit(X_train, y_train) # type: ignore
 
         _, _, _, rmsle = make_prediction(model=best_model, X=X_val, y=y_val)
-        save_model_to_local(model=best_model, hparams=best_hparams, model_name=model_name, trig='bayesian') # type: ignore
 
     else:
         main_logger.error('failed to complete bayesian optimization. return emply model')

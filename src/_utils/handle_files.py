@@ -3,11 +3,11 @@ import datetime
 
 current_dir =  os.getcwd()
 MODEL_SAVE_PATH = os.path.join(current_dir, 'models')
-os.makedirs(MODEL_SAVE_PATH, exist_ok=True)
 
 
 def create_file_path(model_name: str = 'gdm', version_tag = None, trig: str = 'best') -> tuple[str, str]:
     """Creates and returns a file path and a file name (timestamped) for model serialization."""
+    os.makedirs(MODEL_SAVE_PATH, exist_ok=True)
 
     # create a folder path
     folder_path = os.path.join(MODEL_SAVE_PATH, f'{model_name}_{trig}')
