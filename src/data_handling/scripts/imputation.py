@@ -28,7 +28,7 @@ def structure_missing_values(df: pd.DataFrame, target_cols_to_impute: list = [],
 
 
 def fetch_imputation_cache_key_and_file_path(stockcode):
-    cache_key = f"imp_data:{stockcode}"
+    cache_key = f"imp_data:{{{stockcode}}}"
     temp_file_path = f'/tmp/stockcode_{stockcode}.parquet'
     return cache_key, temp_file_path
 

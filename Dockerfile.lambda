@@ -21,6 +21,3 @@ RUN pip install --no-cache-dir -r requirements_dev.txt
 ENTRYPOINT [ "python" ]
 
 CMD [ "-m", "awslambdaric", "app.handler" ]
-
-# no need for containarlized lambda func
-EXPOSE 8080

@@ -70,7 +70,6 @@ origins = ['http://localhost:3000', CLIENT_A, API_ENDPOINT]
 
 # global variables
 _redis_client = None
-df_stockcode = None
 preprocessor = None
 model = None
 backup_model = None
@@ -206,7 +205,7 @@ def hello_world():
 @app.route('/v1/predict-price/<string:stockcode>', methods=['GET', 'OPTIONS'])
 @cross_origin(origins=origins, methods=['GET', 'OPTIONS'], supports_credentials=True)
 def predict_price(stockcode):
-    global df_stockcode
+    df_stockcode = None
 
     try:
         main_logger.info('... start to predict ...')
@@ -216,11 +215,18 @@ def predict_price(stockcode):
         main_logger.info(f'predicting for stockcode: {stockcode}')
         main_logger.info(f'query parameters: {data}')
 
-        # fetch cache
+        # define cache key for df_stockcode
         cache_key_df_stockcode, file_path_df_stockcode = data_handling.scripts.fetch_imputation_cache_key_and_file_path(stockcode=stockcode)
-        params_hash = hashlib.sha256(str(sorted(data.items())).encode()).hexdigest()
-        cache_key_prediction_result_by_stockcode = f"prediction:{stockcode}:{params_hash}"
+        hash_data_st = { 'stockcode': stockcode  }
+        params_hash_st = hashlib.sha256(str(sorted(hash_data_st.items())).encode()).hexdigest()
+        cache_key_df_stockcode = f'{cache_key_df_stockcode}:{params_hash_st}'
 
+        # define cache key for prediction
+        hash_data = { 'stockcode': stockcode, **data }
+        params_hash = hashlib.sha256(str(sorted(hash_data.items())).encode()).hexdigest()
+        cache_key_prediction_result_by_stockcode = f"prediction:{{{stockcode}}}:{params_hash}"
+
+        # fetch cache
         if _redis_client is not None:
             # prediction results
             cached_prediction_result = _redis_client.get(cache_key_prediction_result_by_stockcode)
@@ -230,16 +236,17 @@ def predict_price(stockcode):
 
             # load historical data of the product (stockcode)
             cached_df_stockcode = _redis_client.get(cache_key_df_stockcode)
-            if cached_df_stockcode:
-                df_stockcode = json.loads(cached_df_stockcode)
+            if cached_df_stockcode: df_stockcode = json.loads(cached_df_stockcode)
 
         if df_stockcode is None:
-            df_stockcode_bites_io = s3_load(file_path=file_path_df_stockcode[1:] if file_path_df_stockcode[0] == '/' else file_path_df_stockcode)
+            df_stockcode_bites_io = s3_load(
+                file_path=file_path_df_stockcode[1:] if file_path_df_stockcode[0] == '/' else file_path_df_stockcode
+            )
             if df_stockcode_bites_io: df_stockcode = pd.read_parquet(df_stockcode_bites_io)
-
 
         # define the price range
         min_price, max_price = data.get('unitprice_min', None), data.get('unitprice_max', None)
+
 
         if min_price is None:
             if df_stockcode is not None and not df_stockcode.empty:
@@ -262,6 +269,7 @@ def predict_price(stockcode):
 
         NUM_PRICE_BINS = data.get('num_price_bins', 12)
         price_range = np.linspace(min_price, max_price, NUM_PRICE_BINS)
+        main_logger.info(f'price ranges for stockcode {stockcode}: ${min_price} - ${max_price}')
 
 
         # impute input data
@@ -340,6 +348,10 @@ def predict_price(stockcode):
                 if df_stockcode is not None:
                     df_stockcode_json = json.dumps(df_stockcode.to_dict())
                     _redis_client.set(cache_key_df_stockcode, df_stockcode_json, ex=86400)
+
+
+                # deleted_df = _redis_client.delete(cache_key_df_stockcode)
+                # deleted_prediction = _redis_client.delete(cache_key_prediction_result_by_stockcode)
 
             return jsonify(all_outputs)
 
@@ -449,8 +461,11 @@ def handler(event, context):
         _redis_client.set("test_key", "test_value", ex=60)
         main_logger.info(f"✅ redis set operation: {time.time() - start_time:.2f} seconds")
 
-        _redis_client.flushall()
-        main_logger.info(f"✅ redis temporary operaion: flush all data")
+        # _redis_client.flushall(target_nodes='all')
+        all_keys = _redis_client.keys('*')
+        if all_keys:
+            deleted = _redis_client.delete(*all_keys)
+            main_logger.info(f"✅ manually deleted {deleted} keys")
 
     return awsgi.response(app, event, context)
 
