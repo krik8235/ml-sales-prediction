@@ -1,4 +1,3 @@
-import torch
 import torch.nn as nn
 import numpy as np
 
@@ -8,13 +7,12 @@ from src._utils import main_logger
 
 def main_script(X_train, X_val, X_test, y_train, y_val, y_test) -> nn.Module:
     """
-    Tunes the PyTorch model using GridSearch and Bayesian Optimization. 
+    Tunes the PyTorch model using GridSearch and Bayesian Optimization.
     Then, stores the search results on optimal models as timestamped files in the local storage.
     Lastly, selects and returns the best performing model out of all search trials.
     The best performing model is retrained on the full input data (X) before saving.
     """
 
-    # try:
     # grid search
     main_logger.info('... start grid search on DFN ...')
     search_space_grid = {
@@ -48,12 +46,11 @@ def main_script(X_train, X_val, X_test, y_train, y_val, y_test) -> nn.Module:
 
     # retrain the best model w the entire dataset
     X, y = np.concatenate([X_train, X_val, X_test], axis=0), np.concatenate([y_train, y_val, y_test], axis=0)
-    best_dfn_full_trained, _ = t.train_model(X, y, model=best_dfn, optimizer=best_optimizer, batch_size=best_batch_size, num_epochs=200)
+
+    best_dfn_full_trained, _ = t.train_model(
+        X_train=X, y_train=y, model=best_dfn, optimizer=best_optimizer, batch_size=best_batch_size, num_epochs=200
+    )
 
     # save the retrained best model to local
     t.save_model_to_local(model=best_dfn_full_trained, trig='best')
     return best_dfn_full_trained
-        
-    # except:
-    #     main_logger.error('failed to load or run search to find the best dfn. returning empty dfn.')
-    #     return t.DFN(input_dim=X_train.shape[1])

@@ -12,7 +12,7 @@ device = torch.device(device_type)
 
 def make_prediction(X, y, model=None, criterion = nn.MSELoss()) -> tuple[np.ndarray, float, float, float]:
     """
-    Makes a prediction from the dataset (X). 
+    Makes a prediction from the dataset (X).
     Loads a model if file_path is given, else use a given model in the argument.
     Returns y_pred, loss, MSE for logged sales, MAE for actual quantity, and RMSLE for actual quantity.
     """
@@ -21,7 +21,7 @@ def make_prediction(X, y, model=None, criterion = nn.MSELoss()) -> tuple[np.ndar
     # load model
     model = model if model else load_model(input_dim=X.shape[1], model_name='dfn', trig='best')
     if model is None: raise Exception('No model found.')
-    
+
     model.to(device)
     model.eval()
 
@@ -39,7 +39,7 @@ def make_prediction(X, y, model=None, criterion = nn.MSELoss()) -> tuple[np.ndar
 
             all_preds.extend(y_pred.cpu().numpy())
             all_targets.extend(target.cpu().numpy())
-    
+
     # loss = criterion(y_tensor, y_pred)
     total_loss = running_loss / len(data_loader.dataset) # type: ignore
 
@@ -48,8 +48,8 @@ def make_prediction(X, y, model=None, criterion = nn.MSELoss()) -> tuple[np.ndar
 
     # to avoid overflow, clip the values
     clipped_preds = np.clip(preds, -np.inf, 10)
-    clipped_targets = np.clip(targets, -np.inf, 10) 
-    
+    clipped_targets = np.clip(targets, -np.inf, 10)
+
     # computes performance metrics
     mse = mean_squared_error(targets, preds)
     exp_mae = mean_absolute_error(np.exp(clipped_targets), np.exp(clipped_preds))

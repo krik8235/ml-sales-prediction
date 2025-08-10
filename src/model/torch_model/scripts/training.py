@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.nn as nn
 import optuna # type: ignore
@@ -7,36 +8,45 @@ from src._utils import main_logger
 
 
 def train_model(
-        X_train, y_train,
         model,
-        batch_size,
         optimizer,
         criterion = nn.MSELoss(),
         num_epochs: int = 50,
         min_delta: float = 1e-5,
         patience: int = 10,
-        trial=None
+        trial=None,
+        train_data_loader=None, val_data_loader=None,
+        X_train=None, y_train=None, batch_size=32, # backup args when data loaders are not given
     ) -> tuple[nn.Module, float]:
 
     from src.model.torch_model.scripts.tuning import create_torch_data_loader
 
-    # device 
-    device_type = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
+    # device
+    device_type = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
     device = torch.device(device_type)
-    
-    # set up train/validation data loader
-    train_data_loader, val_data_loader = None, None
-    X_train_search, X_val_search, y_train_search, y_val_search = train_test_split(
-        X_train, y_train, test_size=10000, shuffle=True, random_state=42
-    )
-    train_data_loader = create_torch_data_loader(X=X_train_search, y=y_train_search, batch_size=batch_size)
-    val_data_loader = create_torch_data_loader(X=X_val_search, y=y_val_search, batch_size=batch_size)
 
-    
+    # gradient scaler for stability (only for cuba)
+    scaler = torch.GradScaler(device=device_type) if device_type == 'cuba' else None
+
+    if train_data_loader is None or val_data_loader is None:
+    # if not np.all(train_data_loader) or not np.all(val_data_loader):
+        # set up train/validation data loader
+        try:
+            X_train_search, X_val_search, y_train_search, y_val_search = train_test_split(
+                X_train, y_train, test_size=10000, shuffle=True, random_state=42
+            )
+            train_data_loader = create_torch_data_loader(X=X_train_search, y=y_train_search, batch_size=batch_size)
+            val_data_loader = create_torch_data_loader(X=X_val_search, y=y_val_search, batch_size=batch_size)
+        except:
+            main_logger.error('need a data loader or training dataset. return empty model')
+            return model, float('inf')
+
+
     # start training - with validation and early stopping
     best_val_loss = float('inf')
     epochs_no_improve = 0
     for epoch in range(num_epochs):
+        main_logger.info(f'... starts epoch {epoch + 1} ...')
         model.train()
         for batch_X, batch_y in train_data_loader:
             batch_X, batch_y = batch_X.to(device), batch_y.to(device)
@@ -47,27 +57,27 @@ def train_model(
                 with torch.autocast(device_type=device_type):
                     outputs = model(batch_X)
                     loss = criterion(outputs, batch_y)
-                
-                # gradient scaler for stability
-                scaler = torch.GradScaler(device=device_type)
+                    if torch.any(torch.isnan(outputs)) or torch.any(torch.isinf(outputs)):
+                        main_logger.error('pytorch model returns nan or inf. break the training loop.')
+                        raise Exception()
 
                 # create scaled gradients of the loss
-                scaler.scale(loss).backward()
+                if scaler is not None:
+                    scaler.scale(loss).backward()
+                    scaler.step(optimizer)  # unscales the gradients. call optimizer.step if gradient is not inf or nan
+                    scaler.update()  # updates the scale
 
-                # unscales the gradients. call optimizer.step if gradient is not inf or nan
-                scaler.step(optimizer)
+                else:
+                    loss.backward()
+                    optimizer.step()
 
-                # updates the scale
-                scaler.update()
-            
             except:
                 outputs = model(batch_X)
                 loss = criterion(outputs, batch_y)
                 loss.backward()
                 optimizer.step()
-            
-        if (epoch + 1) % 10 == 0: main_logger.info(f"Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item():.4f}")
 
+        if (epoch + 1) % 10 == 0: main_logger.info(f"epoch [{epoch+1}/{num_epochs}], loss: {loss.item():.4f}")
 
         # validate on a validation dataset (subset of the entire training dataset)
         model.eval()
@@ -81,7 +91,7 @@ def train_model(
                 val_loss += criterion(outputs_val, batch_y_val).item()
 
         val_loss /= len(val_data_loader)
-      
+
         # execute early stopping
         if val_loss < best_val_loss - min_delta:
             best_val_loss = val_loss

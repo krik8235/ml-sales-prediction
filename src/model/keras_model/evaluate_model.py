@@ -11,7 +11,7 @@ def _build_cnn_model(hparams: dict, input_shape: tuple) -> models.Model:
     x = layers.Conv2D(hparams['filters_0'], (3, 3), activation='relu', padding='same')(inputs)
     if hparams.get('batch_norm_0', False): x = layers.BatchNormalization()(x)
     x = layers.MaxPooling2D(pool_size=(2, 1), padding='same')(x)
-    
+
     for i in range(1, hparams.get('num_conv_layers', 1)):
         if f'filters_{i}' in hparams:
             x = layers.Conv2D(hparams.get(f'filters_{i}', 16), (3, 3), activation='relu', padding='same')(x)
@@ -36,12 +36,12 @@ def evaluate_model(X_train, y_train, X_val, y_val, hparams: dict, metric: str = 
     """
     Trains and evaluates Keras models based on validation dataset and given metrics (default: MAE).
     """
-    
+
     X_train_reshaped = X_train.reshape(X_train.shape[0], X_train.shape[1], 1, 1)
     model = _build_cnn_model(hparams=hparams, input_shape=X_train_reshaped.shape[1:])
     early_stopping = callbacks.EarlyStopping(
         monitor=metric,
-        patience=5,
+        patience=10,
         restore_best_weights=True,
         verbose=0
     )
@@ -54,7 +54,7 @@ def evaluate_model(X_train, y_train, X_val, y_val, hparams: dict, metric: str = 
         verbose=0 # type: ignore
     )
     _, mae = model.evaluate(X_val, y_val, verbose=0) # type: ignore
-    
+
     # clear keras backend
     backend.clear_session()
 

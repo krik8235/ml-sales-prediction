@@ -11,5 +11,5 @@ def save_model_to_local(model, hparams: dict, model_name: str = 'gbm', trig: str
     with open(file_path, 'wb') as f:
         pickle.dump({'best_model': model, 'best_hparams': hparams, **kwargs}, f)
         main_logger.info(f"scikit-learn model saved to {file_path}")
-    
+
     return file_path

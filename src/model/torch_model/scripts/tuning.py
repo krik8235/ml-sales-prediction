@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
+from sklearn.model_selection import train_test_split
 
 from src.model.torch_model.scripts.pretrained_base import DFN
 from src.model.torch_model.scripts.training import train_model
@@ -60,7 +61,7 @@ def construct_model_and_optimizer(input_dim, hparams = dict()):
     batch_norm = hparams.get('batch_norm', backup_hparams.get('batch_norm', 5))
 
     hidden_units_per_layer = [v for k, v in hparams.items() if 'n_units_layer_' in k]
-    if not hidden_units_per_layer: 
+    if not hidden_units_per_layer:
         hidden_units_per_layer=[v for k, v in backup_hparams.items() if 'n_units_layer_' in k]
         if not hidden_units_per_layer: hidden_units_per_layer = [64] * num_layers
 
@@ -104,18 +105,27 @@ def grid_search(X_train, X_val, y_train, y_val, search_space: dict, verbose: boo
 
         current_hparams = dict(zip(keys, combo))
         model, optimizer = construct_model_and_optimizer(hparams=current_hparams, input_dim=X_train.shape[1])
-        batch_size = current_hparams.get('batch_size', 16)       
+        batch_size = current_hparams.get('batch_size', 16)
+
+        # set up train/validation data loader
+        X_train_search, X_val_search, y_train_search, y_val_search = train_test_split(
+            X_train, y_train, test_size=10000, shuffle=True, random_state=42
+        )
+        train_data_loader = create_torch_data_loader(X=X_train_search, y=y_train_search, batch_size=batch_size)
+        val_data_loader = create_torch_data_loader(X=X_val_search, y=y_val_search, batch_size=batch_size)
+
+        # train the model
         model, val_loss = train_model(
-            X_train, y_train, 
+            train_data_loader=train_data_loader,
+            val_data_loader=val_data_loader,
             model=model,
-            batch_size=batch_size,
             optimizer=optimizer,
             criterion=criterion,
-            num_epochs=200,
+            num_epochs=50,
             min_delta=1e-5,
             patience=10
         )
-   
+
         # evaluation on validation dataset
         model.eval()
         data_loader_val = create_torch_data_loader(X=X_val, y=y_val, batch_size=batch_size)
@@ -179,14 +189,20 @@ def bayesian_optimization(X_train, X_val, y_train, y_val):
         optimizer_name = trial.suggest_categorical('optimizer', ['adam', 'rmsprop', 'sgd', 'adamw', 'adamax', 'adadelta', 'radam'])
         optimizer = _handle_optimizer(optimizer_name=optimizer_name, model=model, lr=learning_rate)
 
-        # training
+        # data loaders
         batch_size = trial.suggest_categorical('batch_size', [32, 64, 128, 256])
-        num_epochs = trial.suggest_int('num_epochs', 10, 500)
+        X_train_search, X_val_search, y_train_search, y_val_search = train_test_split(
+            X_train, y_train, test_size=10000, shuffle=True, random_state=42
+        )
+        train_data_loader = create_torch_data_loader(X=X_train_search, y=y_train_search, batch_size=batch_size)
+        val_data_loader = create_torch_data_loader(X=X_val_search, y=y_val_search, batch_size=batch_size)
 
+        # training
+        num_epochs = trial.suggest_int('num_epochs', 10, 500)
         _, best_val_loss = train_model(
-            X_train, y_train,
+            train_data_loader=train_data_loader,
+            val_data_loader=val_data_loader,
             model=model,
-            batch_size=batch_size,
             optimizer=optimizer,
             criterion = criterion,
             num_epochs=num_epochs,
@@ -194,7 +210,7 @@ def bayesian_optimization(X_train, X_val, y_train, y_val):
         )
         return best_val_loss
 
-    
+
     # start optimization
     study = optuna.create_study(direction='minimize', sampler=optuna.samplers.TPESampler())
     study.optimize(objective, n_trials=50, timeout=600)
@@ -222,15 +238,19 @@ def bayesian_optimization(X_train, X_val, y_train, y_val):
     # construct best optimizer
     best_optimizer_name = best_hparams['optimizer']
     best_optimizer = _handle_optimizer(optimizer_name=best_optimizer_name, model=best_model, lr=best_lr)
-    
+
+    # data loaders
+    train_data_loader = create_torch_data_loader(X=X_train, y=y_train, batch_size=best_batch_size)
+    val_data_loader = create_torch_data_loader(X=X_val, y=y_val, batch_size=best_batch_size)
+
     # retrain the best model with full training dataset (using optimal batch size)
     best_model, _ = train_model(
-        X_val, y_val, 
+        train_data_loader=train_data_loader,
+        val_data_loader=val_data_loader,
         model=best_model,
-        batch_size=best_batch_size,
         optimizer=best_optimizer,
         criterion = criterion,
         num_epochs=50
     )
-    
+
     return best_model, best_optimizer, best_batch_size

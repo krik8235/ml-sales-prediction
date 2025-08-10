@@ -3,6 +3,7 @@ __pycache__/
 .DS_Store/
 .venv/
 dist/
+tmp/
 
 .vscode
 .env

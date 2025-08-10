@@ -6,7 +6,6 @@ uv.lock
 dist/
 
 .vscode
-.env
 *.psd
 *.pdf
 [a-f]*.log
@@ -27,7 +26,6 @@ gbm_best/
 gbm_bayesian/
 gbm_grid/
 
-preprocessors/
 
 .note
 .legacy/

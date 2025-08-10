@@ -9,7 +9,7 @@ def save_df_to_csv(df: pd.DataFrame) -> tuple[str, str]: # type: ignore
     os.makedirs('data/processed', exist_ok=True)
 
     if df is None: raise Exception('Dataframe is missing')
-    
+
     current_dir =  os.getcwd()
     file_name = 'processed_df.csv'
     folder_path = os.path.join(current_dir, 'data', 'processed')

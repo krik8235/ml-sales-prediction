@@ -1,0 +1,17 @@
+FROM python:3.12-slim
+
+# Install your dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY requirements_dev.txt .
+RUN pip install --no-cache-dir -r requirements_dev.txt
+
+# Copy your application
+COPY app.py .
+
+# Expose port 8080 for SageMaker
+EXPOSE 8080
+
+# Start the Flask app (not Lambda runtime)
+CMD ["python", "app.py"]

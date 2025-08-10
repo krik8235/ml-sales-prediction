@@ -14,9 +14,7 @@ import src.model.torch_model as t
 import src.model.sklearn_model as sk
 from src._utils import s3_upload
 
-
 warnings.filterwarnings("ignore", category=RuntimeWarning)
-load_dotenv(override=True)
 
 # paths
 PRODUCTION_MODEL_FOLDER_PATH = 'models/production'
@@ -26,7 +24,7 @@ EN_FILE_PATH = os.path.join(PRODUCTION_MODEL_FOLDER_PATH, 'en_best.pth')
 
 PREPROCESSOR_PATH = 'preprocessors/column_transformer.pkl'
 
-# models 
+# models
 sklearn_models = [
     {
         'model_name': 'en',
@@ -90,7 +88,10 @@ sklearn_models = [
 
 
 if __name__ == '__main__':
-    os.environ["OMP_NUM_THREADS"] = "1" # explicitly disable multithreaded operation - forcing PyTorch to use a single thread for CPU operations
+    load_dotenv(override=True)
+
+    # explicitly disable multithreaded operation - forcing PyTorch to use a single thread for CPU operations
+    os.environ["OMP_NUM_THREADS"] = "1"
     os.environ["MKL_NUM_THREADS"] = "1"
 
     os.makedirs(PRODUCTION_MODEL_FOLDER_PATH, exist_ok=True)
@@ -102,11 +103,11 @@ if __name__ == '__main__':
     joblib.dump(preprocessor, PREPROCESSOR_PATH)
     s3_upload(PREPROCESSOR_PATH)
 
-
-    # # torch dfn (tuning -> save best ver. to local + s3)
-    # best_dfn_full_trained = t.main_script(X_train, X_val, X_test, y_train, y_val, y_test)
-    # torch.save(best_dfn_full_trained.state_dict(), DFN_FILE_PATH)
-    # s3_upload(file_path=DFN_FILE_PATH)
+    # models
+    # torch dfn (tuning -> save best ver. to local + s3)
+    best_dfn_full_trained = t.main_script(X_train, X_val, X_test, y_train, y_val, y_test)
+    torch.save(best_dfn_full_trained.state_dict(), DFN_FILE_PATH)
+    s3_upload(file_path=DFN_FILE_PATH)
 
     # elastic net
     best_en_trained, best_hparams_en = sk.main_script(X_train, X_val, X_test, y_train, y_val, y_test, **sklearn_models[0])
@@ -115,12 +116,12 @@ if __name__ == '__main__':
             pickle.dump({ 'best_model': best_en_trained, 'best_hparams': best_hparams_en }, f)
         s3_upload(file_path=EN_FILE_PATH)
 
-    # # light gbm
-    # X_train, X_val, X_test, y_train, y_val, y_test, _ = data_handling.main_script(is_scale=False)
-    # best_gbm_trained, best_hparams_gbm = sk.main_script(X_train, X_val, X_test, y_train, y_val, y_test, **sklearn_models[1])
+    # light gbm
+    X_train, X_val, X_test, y_train, y_val, y_test, _ = data_handling.main_script(is_scale=False)
+    best_gbm_trained, best_hparams_gbm = sk.main_script(X_train, X_val, X_test, y_train, y_val, y_test, **sklearn_models[1])
 
-    # if best_gbm_trained is not None:
-    #     with open(GBM_FILE_PATH, 'wb') as f:
-    #         pickle.dump({'best_model': best_gbm_trained, 'best_hparams': best_hparams_gbm }, f)
-        
-    #     s3_upload(file_path=GBM_FILE_PATH)
+    if best_gbm_trained is not None:
+        with open(GBM_FILE_PATH, 'wb') as f:
+            pickle.dump({'best_model': best_gbm_trained, 'best_hparams': best_hparams_gbm }, f)
+
+        s3_upload(file_path=GBM_FILE_PATH)

@@ -12,7 +12,7 @@ def create_file_path(model_name: str = 'gdm', version_tag = None, trig: str = 'b
     # create a folder path
     folder_path = os.path.join(MODEL_SAVE_PATH, f'{model_name}_{trig}')
     os.makedirs(folder_path, exist_ok=True)
-    
+
     # create a file path
     file_ext = 'pth' if model_name == 'dfn' else 'pkl'
     timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
@@ -32,6 +32,5 @@ def retrieve_file_path(folder_path: str) -> tuple[str, str]:
         files_in_folder.sort()
         file_name = files_in_folder[-1]
         file_path = os.path.join(folder_path, file_name)
-        
-    return  file_path, file_name
 
+    return  file_path, file_name

@@ -21,14 +21,14 @@ def _pickle_loader(folder_path=None, file_path=None):
     else:
         main_logger.error('Couldnt find a file path. Return None.')
         return None, None
-    
+
 
 def load_model(model_name: str = 'gbm', trig: str = 'best'):
     """Loads the latest sklearn model from the local folder or the S3 bucket."""
 
     model, hparams = None, None
     folder_path = os.path.join(MODEL_SAVE_PATH, f'{model_name}_{trig}')
-    
+
     try:
         model, hparams = _pickle_loader(folder_path=folder_path)
 
@@ -50,4 +50,3 @@ def load_model(model_name: str = 'gbm', trig: str = 'best'):
     except Exception as e:
         main_logger.error(f"failed to load scikit-learn model for retraining: {e}. raise error.")
         raise e
-   

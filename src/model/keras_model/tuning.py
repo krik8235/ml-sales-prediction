@@ -26,7 +26,7 @@ def grid_search(X_train, y_train, X_val, y_val, search_space: dict) -> tuple[flo
     best_mae =  float('inf')
     best_hparams = None
     best_model = None
-    
+
     for num_conv in search_space['num_conv_layers']:
         # creating base combination of the hyperparameters
         dynamic_filters_bn_combinations = list(
@@ -62,7 +62,7 @@ def grid_search(X_train, y_train, X_val, y_val, search_space: dict) -> tuple[flo
             best_mae = current_mae
             best_hparams = hparams
             best_model = model
-            
+
     main_logger.info(f'Best hparams:\n{best_hparams}\nBest acuracy {best_mae:.4f}')
 
     return best_mae, best_hparams, best_model

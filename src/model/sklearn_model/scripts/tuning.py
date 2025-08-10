@@ -93,13 +93,13 @@ def run_kfold_validation(
                 if patience_counter >= early_stopping_rounds:
                     main_logger.info(f"Fold {fold}: Early stopping triggered at iteration {iteration} (best at {best_iteration}). Best MSE: {best_val_mse:.4f}")
                     break
-            
+
             else:
                 main_logger.info(f"fold #{fold}: Max iterations ({max_iters}) reached. Best MSE: {best_val_mse:.4f}")
 
             if best_model_state: model.set_params(**best_model_state)
                 # main_logger.info(f"Fold {fold}: Restored model to best state from iteration {best_iteration}.")
-       
+
         y_pred_val_kf = model.predict(X_val_fold)
         mses += mean_squared_error(y_pred_val_kf, y_val_fold)
 
@@ -124,7 +124,7 @@ def _grid_search(X_train, y_train, search_space: dict, base_model) -> tuple[Iter
 
     for hparams in all_combinations_list:
         current_mse = run_kfold_validation(X_train=X_train, y_train=y_train, base_model=base_model, hparams=hparams)
-        
+
         if current_mse < best_mse:
             best_mse = current_mse
             best_hparams = hparams
@@ -153,7 +153,7 @@ def run_grid_search(
         match model_name:
             case 'gbm':
                 best_model.fit( # type: ignore
-                    X_train, y_train, 
+                    X_train, y_train,
                     eval_set=[(X_val, y_val)], eval_metric='l2', callbacks=[lgb.early_stopping(10, verbose=False)] # type: ignore
                 )
             case _:
@@ -175,7 +175,7 @@ def _bayesian_optimization(X_train, y_train, space: list, base_model, n_calls=50
         hparams = {item: params[i] for i, item in enumerate(hparam_names)}
         ave_mse = run_kfold_validation(X_train=X_train, y_train=y_train, base_model=base_model, hparams=hparams)
         return ave_mse
-    
+
     hparam_names = [s.name for s in space]
     objective_partial = partial(objective, X_train=X_train, y_train=y_train, base_model=base_model, hparam_names=hparam_names)
     results = gp_minimize(
@@ -191,14 +191,14 @@ def _bayesian_optimization(X_train, y_train, space: list, base_model, n_calls=50
     best_model = base_model(**best_hparams)
 
     main_logger.info(f'best hparams:\n{best_hparams}\nbest MSE {best_mse:.4f}')
-    
+
     return best_model, best_hparams, best_mse
 
 
 def run_bayesian_optimization(
-        X_train, X_val, y_train, y_val, 
-        search_space: list, 
-        base_model, 
+        X_train, X_val, y_train, y_val,
+        search_space: list,
+        base_model,
         model_name: str = 'en'
     ):
 
@@ -212,7 +212,7 @@ def run_bayesian_optimization(
         match model_name:
             case 'gbm':
                 best_model.fit( # type: ignore
-                    X_train, y_train, 
+                    X_train, y_train,
                     eval_set=[(X_val, y_val)], eval_metric='l2', callbacks=[lgb.early_stopping(10, verbose=False)] # type: ignore
                 )
             case _:
@@ -223,5 +223,5 @@ def run_bayesian_optimization(
     else:
         main_logger.error('failed to complete bayesian optimization. return emply model')
         best_model = ElasticNet() if model_name == 'en' else lgb.LGBMRegressor()
-       
+
     return best_model, best_hparams, rmsle

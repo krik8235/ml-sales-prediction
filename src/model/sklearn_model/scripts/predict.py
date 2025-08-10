@@ -12,8 +12,8 @@ def make_prediction(model, X, y) -> tuple[np.ndarray, float, float, float]:
 
     # to avoid overflow, clip the values
     clipped_preds = np.clip(y_pred, -np.inf, 10)
-    clipped_targets = np.clip(y, -np.inf, 10) 
-    
+    clipped_targets = np.clip(y, -np.inf, 10)
+
     # computes performance metrics
     mse = mean_squared_error(y, y_pred)
     exp_mae = mean_absolute_error(np.exp(clipped_targets), np.exp(clipped_preds))
