@@ -1,5 +1,6 @@
 import itertools
 import pandas as pd
+import numpy as np
 import optuna # type: ignore
 import torch
 import torch.nn as nn
@@ -18,14 +19,15 @@ device = torch.device(device_type)
 
 def create_torch_data_loader(X, y, batch_size: int = 32) -> DataLoader[tuple[torch.Tensor, torch.Tensor]]:
     """
-    Converts NumPy's ndarray or Pandas' Series data to Tensor Dataset, and then returns the PyTorch DataLoader.
+    Converts NumPy's ndarray or Pandas' Series data to Tensor Dataset and returns the PyTorch DataLoader.
     """
-    X_np = X.values if isinstance(X, pd.Series) else X
+
+    X_np = X.values if isinstance(X, pd.Series) else X.to_numpy() if isinstance(X, pd.DataFrame) else X
 
     # use lower-precision of float16 for latency
     X_final_tensor = torch.tensor(X_np, dtype=torch.float32)
 
-    y_np = y.values if isinstance(y, pd.Series) else y
+    y_np = y.values if isinstance(y, pd.Series) else y.to_numpy() if isinstance(y, pd.DataFrame)  else y
     y_final_tensor = torch.tensor(y_np, dtype=torch.float32).view(-1, 1)
 
     dataset_final = TensorDataset(X_final_tensor, y_final_tensor)

@@ -1,7 +1,7 @@
 import os
 import boto3 # type: ignore
-import time
 import json
+import time
 import datetime
 import warnings
 import hashlib
@@ -267,30 +267,46 @@ def predict_price(stockcode):
         elif min_price > max_price:
             min_price, max_price = max_price, min_price
 
-        NUM_PRICE_BINS = data.get('num_price_bins', 12)
+        NUM_PRICE_BINS = data.get('num_price_bins', 1000)
         price_range = np.linspace(min_price, max_price, NUM_PRICE_BINS)
         main_logger.info(f'price ranges for stockcode {stockcode}: ${min_price} - ${max_price}')
 
-
         # impute input data
+        customerid = data.get('customerid', 'unknown') if data else 'unknown'
+        try: customer_recency_days = df_stockcode.loc[df_stockcode['customerid'] == customerid, 'customer_recency_days_latest'].iloc[0] # type:ignore
+        except: customer_recency_days = 365
+        try: customer_total_spend_ltm = df_stockcode.loc[df_stockcode['customerid'] == customerid, 'customer_total_spend_ltm_latest'].iloc[0] # type:ignore
+        except: customer_total_spend_ltm = 0
+        try: customer_freq_ltm =  df_stockcode.loc[df_stockcode['customerid'] == customerid, 'customer_freq_ltm_latest'].iloc[0] # type:ignore
+        except: customer_freq_ltm = 0
+
         new_data = {
             'invoicedate': [np.datetime64(datetime.datetime.now())] * NUM_PRICE_BINS,
             'invoiceno': [data.get('invoiceno', np.nan)] * NUM_PRICE_BINS,
             'stockcode': [stockcode] * NUM_PRICE_BINS,
-            'quantity': [data.get('quantity', df_stockcode.loc[0, 'quantity_mean']) if df_stockcode is not None else 0] * NUM_PRICE_BINS,
-            'customerid': [data.get('customerid', np.nan) if data else np.nan] * NUM_PRICE_BINS,
+            'quantity': [np.nan] * NUM_PRICE_BINS,
+            'customerid': [customerid] * NUM_PRICE_BINS,
             'country': [data.get('country', df_stockcode.loc[0, 'country']) if df_stockcode is not None else np.nan] * NUM_PRICE_BINS,
-            'unitprice': price_range
+            'unitprice': price_range,
+            'product_avg_quantity_last_month': [df_stockcode.loc[0, 'product_avg_quantity_last_month'] if df_stockcode is not None else 0] * NUM_PRICE_BINS,
+            'is_registered': [True if customerid else False] * NUM_PRICE_BINS,
+            'customer_recency_days': [customer_recency_days] * NUM_PRICE_BINS,
+            'customer_total_spend_ltm': [customer_total_spend_ltm] * NUM_PRICE_BINS,
+            'customer_freq_ltm': [customer_freq_ltm] * NUM_PRICE_BINS,
+            'is_return': [False] * NUM_PRICE_BINS,
         }
         new_df = pd.DataFrame(new_data)
-        new_df = data_handling.scripts.structure_missing_values(df=new_df)
-        new_df = data_handling.scripts.handle_feature_engineering(df=new_df)
 
+        # add dt related features
+        new_df['year'] = new_df['invoicedate'].dt.year
+        new_df['year_month'] = new_df['invoicedate'].dt.to_period('M')
+        new_df['day_of_week'] = new_df['invoicedate'].dt.strftime('%a')
+        new_df['invoicedate'] = new_df['invoicedate'].astype(int) / 10 ** 9
 
-        # transform input data
+        # suffle and transform input data
         target_col = 'quantity'
         X = new_df.copy().drop(target_col, axis=1)
-        X = X.tail(NUM_PRICE_BINS)
+        X = X.sample(frac=1).reset_index(drop=True)
         if preprocessor: X = preprocessor.transform(X)
 
         # start prediction
@@ -303,13 +319,13 @@ def predict_price(stockcode):
                 y_pred = model(input_tensor)
                 y_pred = y_pred.cpu().numpy().flatten()
                 y_pred_actual = np.exp(y_pred + epsilon)
-                main_logger.info(f"primary model's prediction for stockcode {stockcode} - actual quantity (units) {y_pred_actual}")
+                main_logger.info(f"primary model's prediction for stockcode {stockcode} - actual quantity (units) {y_pred_actual[0:5]}")
 
                 if np.isinf(y_pred_actual).any() or (y_pred_actual == 0.0).any() or y_pred_actual is None: # type: ignore
                     if backup_model:
                         y_pred = backup_model.predict(X)
                         y_pred_actual = np.exp(y_pred + epsilon)
-                        main_logger.info(f"backup model's prediction for stockcode {stockcode} - actual quantity (units) {y_pred_actual}")
+                        main_logger.info(f"backup model's prediction for stockcode {stockcode} - actual quantity (units) {y_pred_actual[0:5]}")
 
         elif backup_model:
             try: input_dim = len(backup_model.feature_name_)
@@ -317,14 +333,14 @@ def predict_price(stockcode):
             if X.shape[1] > input_dim: X = X[:, : X.shape[1] - input_dim]
             y_pred = backup_model.predict(X)
             y_pred_actual = np.exp(y_pred + epsilon)
-            main_logger.info(f"backup model's prediction for stockcode {stockcode} -  actual quantity (units) {y_pred_actual}")
+            main_logger.info(f"backup model's prediction for stockcode {stockcode} -  actual quantity (units) {y_pred_actual[0:5]}")
 
         if y_pred_actual is not None:
             df_ = new_df.copy()
-            df_['quantity'] = y_pred_actual
+            df_['quantity'] = np.floor(y_pred_actual * 10)
+            df_ = df_.sort_values(by='unitprice')
 
             optimal_row = df_.loc[df_['quantity'].idxmax()]
-
             optimal_price = optimal_row['unitprice']
             best_sales = optimal_row['quantity'] * optimal_price
 
@@ -333,11 +349,14 @@ def predict_price(stockcode):
                 current_output = {
                     "stockcode": stockcode,
                     "unit_price": float(row['unitprice']),
-                    "predicted_sales": float(row['quantity'] * row['unitprice']) * 30,
+                    "predicted_sales": float(row['quantity'] * row['unitprice']),
                     "optimal_unit_price": float(optimal_price), # type: ignore
-                    "max_predicted_sales": float(best_sales) * 30, # type: ignore
+                    "max_predicted_sales": float(best_sales), # type: ignore
+                    "quantity": int(row['quantity'])
                 }
                 all_outputs.append(current_output)
+
+            main_logger.info(f'optimal price found: {optimal_price}')
 
             # store cached results and stockcode df
             if _redis_client is not None:
@@ -348,7 +367,6 @@ def predict_price(stockcode):
                 if df_stockcode is not None:
                     df_stockcode_json = json.dumps(df_stockcode.to_dict())
                     _redis_client.set(cache_key_df_stockcode, df_stockcode_json, ex=86400)
-
 
                 # deleted_df = _redis_client.delete(cache_key_df_stockcode)
                 # deleted_prediction = _redis_client.delete(cache_key_prediction_result_by_stockcode)
@@ -389,7 +407,6 @@ def add_header(response):
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONSS'
     response.headers['Access-Control-Allow-Credentials'] = 'true'
     return response
-
 
 
 # loading

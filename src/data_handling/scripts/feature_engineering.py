@@ -22,7 +22,6 @@ def handle_feature_engineering(df: pd.DataFrame, verbose: bool = False) -> pd.Da
     # remove unnecessary features
     if 'description' in df_processed.columns.tolist(): df_processed = df_processed.drop(columns='description')
 
-
     # adds quantity momentum features
     df_processed['invoicedate'] = pd.to_datetime(df_processed['invoicedate'], errors='coerce')
     df_processed['year'] = df_processed['invoicedate'].dt.year
@@ -103,12 +102,17 @@ def handle_feature_engineering(df: pd.DataFrame, verbose: bool = False) -> pd.Da
 
     # imputation (values referred to stockcode)
     df_imputed = df_fin.copy().sort_values(by='stockcode').reset_index(drop=True)
-    df_fin['country'] = df_imputed.groupby('stockcode')['country'].transform(
-        lambda x: x.fillna(x.mode().iloc[0] if not x.mode().empty else 'unknown')
+    df_stockcode = df_imputed.groupby('stockcode', as_index=False).agg(
+        imputed_country=('country', lambda x: x.mode().iloc[0] if not x.mode().empty else 'unknown'),
+        imputed_unitprice=('unitprice', 'median')
     )
-    df_fin['unitprice'] = df_imputed.groupby('stockcode')['unitprice'].transform(
-        lambda x: x.fillna(x.median() if x.median() else 0)
-    )
+    df_fin = pd.merge(df_fin, df_stockcode, on='stockcode', how='left')
+    df_fin['country'] = df_fin['country'].fillna(df_fin['imputed_country'])
+
+    global_median = df_fin['unitprice'].median()
+    df_fin['unitprice'] = df_fin['unitprice'].fillna(df_fin['imputed_unitprice'])
+    df_fin['unitprice'] = df_fin['unitprice'].fillna(global_median)
+    df_fin = df_fin.drop(columns=['imputed_country', 'imputed_unitprice'])
 
     # data type transformation
     df_fin['year_month'] = df_fin['year_month'].dt.month
@@ -131,4 +135,5 @@ def handle_feature_engineering(df: pd.DataFrame, verbose: bool = False) -> pd.Da
     df_fin_log['quantity'] = np.log(df_fin_log['quantity'] + alpha)
 
     if verbose: main_logger.info(df_fin.info())
+
     return df_fin_log

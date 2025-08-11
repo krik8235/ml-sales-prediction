@@ -17,12 +17,13 @@ def train_model(
         trial=None,
         train_data_loader=None, val_data_loader=None,
         X_train=None, y_train=None, batch_size=32, # backup args when data loaders are not given
+        device_type=None,
     ) -> tuple[nn.Module, float]:
 
     from src.model.torch_model.scripts.tuning import create_torch_data_loader
 
     # device
-    device_type = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
+    device_type = device_type if device_type else 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
     device = torch.device(device_type)
 
     # gradient scaler for stability (only for cuba)
@@ -64,11 +65,16 @@ def train_model(
                 # create scaled gradients of the loss
                 if scaler is not None:
                     scaler.scale(loss).backward()
+                    # cliping grad
+                    scaler.unscale_(optimizer)
+                    nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                     scaler.step(optimizer)  # unscales the gradients. call optimizer.step if gradient is not inf or nan
                     scaler.update()  # updates the scale
 
                 else:
                     loss.backward()
+                    # cliping grad
+                    nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
                     optimizer.step()
 
             except:
