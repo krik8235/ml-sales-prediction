@@ -21,7 +21,7 @@ def reconstruct_dataframe(original_df: pd.DataFrame, new_df_to_add: pd.DataFrame
 
 
 
-def main_script(target_col: str = 'quantity', is_scale: bool = True, impute_stockcode = False, verbose: bool = False):
+def main_script(target_col: str = 'sales', is_scale: bool = True, impute_stockcode = False, verbose: bool = False):
     preprocessor = None
     ORIGINAL_DF_PATH = os.environ.get('ORIGINAL_DF_PATH', 'data/original_df.parquet')
     PROCESSED_DF_PATH = os.environ.get('PROCESSED_DF_PATH', 'data/processed_df.parquet')
@@ -40,7 +40,7 @@ def main_script(target_col: str = 'quantity', is_scale: bool = True, impute_stoc
     s3_upload(PROCESSED_DF_PATH)
 
     # creates imputation data by stockcode (stores parquet files in s3)
-    if impute_stockcode: scripts.create_imputation_values_by_stockcode(processed_df=df)
+    if impute_stockcode: scripts.create_imputation_values_by_stockcode(base_df=df)
 
     # classify num and cat columns
     num_cols, cat_cols = scripts.categorize_num_cat_cols(df=df, target_col=target_col)

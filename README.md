@@ -17,25 +17,24 @@
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
 - [Key Features](#key-features)
-- [Dependencies](#dependencies)
-- [Starting the Project](#starting-the-project)
+- [The System Architecture](#the-system-architecture)
+- [Quick Start](#quick-start)
   - [Installing the package manager](#installing-the-package-manager)
   - [Installing dependencies](#installing-dependencies)
   - [Adding env secrets to .env file](#adding-env-secrets-to-env-file)
-  - [Tuning the models from scratch (Optional)](#tuning-the-models-from-scratch-optional)
   - [Running API endpoints](#running-api-endpoints)
-  - [Updating and Running Docker image](#updating-and-running-docker-image)
-- [AWS Ecosystem](#aws-ecosystem)
-  - [Serverless Function: Lambda](#serverless-function-lambda)
-  - [API Gateway](#api-gateway)
-  - [Cache Storage: ElastiCache](#cache-storage-elasticache)
-  - [Model Store, Feature Store: S3](#model-store-feature-store-s3)
-- [Repository Structure](#repository-structure)
+- [Tuning](#tuning)
+  - [Feature engineering](#feature-engineering)
+  - [Model retraining](#model-retraining)
+  - [Tuning from scratch (with caution)](#tuning-from-scratch-with-caution)
+- [Deployment](#deployment)
+  - [Publishing Docker image](#publishing-docker-image)
+  - [Connecting cache storage](#connecting-cache-storage)
+- [Package Management](#package-management)
 - [Contributing](#contributing)
-  - [Steps](#steps)
-  - [Package Management with uv](#package-management-with-uv)
-  - [Pre-Commit Hooks](#pre-commit-hooks)
+  - [Pre-commit hooks](#pre-commit-hooks)
 - [Trouble Shooting](#trouble-shooting)
+- [Ref. Repository Structure](#ref-repository-structure)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -43,7 +42,7 @@
 
 ## Key Features
 
-A dynamic pricing system for an online retailer using predictions served by machine learning models:
+A dynamic pricing system for an online retailer using predictions served by ML models:
 
    - A multi-layered Feedforward Neural Network,
 
@@ -54,56 +53,24 @@ A dynamic pricing system for an online retailer using predictions served by mach
 hosted on the containerized serverless architecture.
 
 
+## The System Architecture
+
+<img src='https://res.cloudinary.com/dfeirxlea/image/upload/v1754580450/portfolio/zafielthrjkxrdgsd5ig.png'/>
+
+<br>
+
+The system design focuses on the following points:
+
+- The application is fully containerized on **Docker** for universal accessibility.
+- The container image is stored in **Elastic Container Registry (ECR)**.
+- **API Gateway's REST API endpoints** trigger an event to invoke the Lambda function.
+- **Lambda function** loads the container image from ECR and perform inference.
+- Trained models, processors, and input features are stored in the **S3** buckets.
+- A **Redis client** caches analytical data and past prediction results stored in ElastiCache.
 
 <hr />
 
-
-## Dependencies
-
-**Inference**
-
-* numpy
-* pandas
-
-* category-encoders
-
-* torch
-* tensorflow
-* scikit-learn
-* lightgbm
-
-* optuna: Hyperparameter optimization framework for PyTorch models
-* scikit-optimize:  Hyperparameter optimization framework for Scikit-learn models
-
-
-**API**
-
-* Flask
-* flask-cors
-
-
-**Deployment**
-
-* python-dotenv: Environment secret control
-* redis: For cache storage
-* waitress: WSGI server for the Flask application.
-
-
-**AWS Ecosystem**
-
-* boto3: AWS SDK for Python, managing AWS services - S3 (for storage), Lambda
-* aws-wsgi: Connecter between JSON (AWS API Gateway) and WSGI (Flask) response.
-
-
-**CI/CD**
-
-* uv: Python package installer and resolver
-* pre-commit: Manage and maintain pre-commit hooks
-
-
-<hr />
-
-## Starting the Project
+## Quick Start
 
 ### Installing the package manager
 
@@ -114,6 +81,7 @@ brew install uv
 ```
 
 For Ubuntu/Debian:
+
 ```bash
 sudo apt-get install uv
 ```
@@ -125,7 +93,7 @@ sudo apt-get install uv
 uv venv
 source .venv/bin/activate
 uv lock --upgrade
-uv sync --all-extras
+uv sync
 ```
 
 - AssertionError/module mismatch errors: Set up default Python version using `.pyenv`
@@ -143,15 +111,6 @@ echo 3.12.8 >> .python-version
 Create `.env` file in the project root and add secret vars following `.env.sample` file.
 
 
-### Tuning the models from scratch (Optional)
-
-```bash
-uv venv
-source .venv/bin/activate
-uv run src/main.py --cache-clear
-```
-
-
 ### Running API endpoints
 
 ```bash
@@ -161,7 +120,47 @@ uv run app.py --cache-clear
 The API is available at `http://localhost:5002`.
 
 
-### Updating and Running Docker image
+<hr />
+
+
+## Tuning
+
+### Feature engineering
+
+- The `data_handling` folder contains data relerated scripts.
+
+- After updating scripts, run:
+
+```bash
+uv run src/data_handling/main.py
+```
+
+
+### Model retraining
+
+- The retrain script will load the serialized model in the model store, then retrain with new data, and upload the retrained model to the model store.
+
+```bash
+uv run src/retrain.py
+```
+
+
+### Tuning from scratch (with caution)
+
+- The main script will run feature engineering and model tuning from scratch, and update instances saved in model store and feature store in S3.
+
+```bash
+uv run src/main.py
+```
+
+- Before running the script, make sure testing the new script in notebook.
+
+
+## Deployment
+
+### Publishing Docker image
+
+- Build and run Docker image:
 
 ```bash
 docker build -t <APP NAME> .
@@ -171,36 +170,20 @@ docker run -p 5002:5002 -e ENV=local <APP NAME> app.py
 Replace `<APP NAME>` with an app name of your choice.
 
 
-## AWS Ecosystem
-
-### Serverless Function: Lambda
-
-- Push the containe image to the AWS Elastic Container Registory (ECR)
+- Push the Dokcer image to AWS Elastic Container Registory (ECR)
 
 ```bash
-# add a tag
+# tagging
 docker tag <YOUR ECR NAME>:<YOUR ECR VERSION> <URI>.dkr.ecr.<REGION>.amazonaws.com/<ECR NAME>:<VERSION>
 
 # push to the ECR
 docker push <URI>.dkr.ecr.<REGION>.amazonaws.com/<ECR NAME>:<VERSION>
 ```
 
-- On the Lambda console, create a new Lambda function (select container image type and pushed container image URI).
 
+### Connecting cache storage
 
-### API Gateway
-
-- Go to the API gateway console, add resources aligned with the API endpoints on the `app.py`.
-- Deploy the API endpoints to the stage.
-- Go back to the Lambda console, add a trigger to the API Gateway.
-
-
-### Cache Storage: ElastiCache
-
-- Open up `AWS ElastiCache` to create Redis OSS cache.
-- Connect the cache storage with the `VPC`.
-- Add a `security group` for the ElastiCache with outbound permissions to the Lambda URI.
-- Make sure the `IAM` role for the Lambda function is authorized the ElastiCache access.
+- Cache storage (ElastiCache) run on Redis engine.
 
 - To test the connection locally:
 
@@ -220,72 +203,34 @@ FLUSHALL
 FLUSHDB
 ```
 
-
-
-### Model Store, Feature Store: S3
-
-- Uses `AWS S3`.
-- Similar to the cache storage, connect it with the `VPC`.
-- Make sure the `IAM` role for the Lambda function is authorized the AWS S3 access (full access).
-
-
-
 <hr />
 
 
-## Repository Structure
+## Package Management
 
-```
-.
-.venv/                  [.gitignore]    # stores uv venv
-│
-└── data/               [.gitignore]
-│     └──raw/                           # stores raw data before engineering
-│     └──preprocessed/                  # stores preprocessed data
-│
-└── models/             [.gitignore]    # stores serialized model after training and tuning
-│     └──dfn/                           # deep feedforward network
-│     └──gbm/                           # light gbm
-│     └──en/                            # elastic net
-│     └──production/                    # models to be stored in S3 for production use
-|
-└── notebooks/                          # stores experiment notebooks
-│
-└── src/                                # core functions
-│     └──_utils/                        # utility functions
-│     └──data_handling/                 # functions to engineer features
-│     └──model/                         # functions to train, tune, validate models
-│     │     └── sklearn_model
-│     │     └── torch_model
-│     │     └── ...
-│     └──main.py                        # main script to run the inference locally
-│
-└──app.py                               # Flask application (API endpoints)
-│
-└──pyproject.toml                       # project configuration
-│
-└──.env                [.gitignore]     # environment variables
-│
-└──uv.lock                              # dependency locking
-│
-└──Dockerfile
-└──.dockerignore
-│
-└──requirements.txt
-│
-└──.python-version                      # python version locking (3.12)
-```
+- Add a package: `uv add <package>`
+- Remove a package: `uv remove <package>`
+- Run a command in the virtual environment: `uv run <command>`
+- To completely refresh the environement, run the following commands:
 
+```bash
+rm -rf .venv
+rm -rf uv.lock
+uv cache clean
+uv venv
+source .venv/bin/activate
+uv sync
+```
 
 <hr />
+
 
 ## Contributing
 
-### Steps
 
 1. Create your feature branch (`git checkout -b feature/your-amazing-feature`)
 
-2. Create amazing features.
+2. Create a feature.
 
 3. Pull the latest version of source code from the main branch (`git pull origin main`) *Address conflicts if any.
 
@@ -295,30 +240,14 @@ FLUSHDB
 
 6. Open a pull request
 
-
-**Optional**
-
-* Flag with `#! REFINEME` for any improvements needed and `#! FIXME` for any errors.
+* Flag `#REFINEME` for any improvement needed and `#FIXME` for any errors.
 
 
-### Package Management with uv
+### Pre-commit hooks
 
-- Add a package: `uv add <package>`
-- Remove a package: `uv remove <package>`
-- Run a command in the virtual environment: `uv run <command>`
-- To completely refresh the environement, run the following commands:
+Pre-commit hooks runs hooks defined in the `pre-commit-config.yaml` file before every commit.
 
-```bash
-$ rm -rf .venv
-$ rm -rf uv.lock
-$ uv cache clean
-$ uv venv
-$ source .venv/bin/activate
-$ uv sync
-```
-
-
-### Pre-Commit Hooks
+To activate the hooks:
 
 1. Install pre-commit hooks:
 
@@ -340,6 +269,7 @@ Pre-commit hooks help maintain code quality by running checks for formatting, li
 git commit --no-verify -m "your-commit-message"
 ```
 
+
 <hr />
 
 ## Trouble Shooting
@@ -352,8 +282,46 @@ Common issues and solutions:
 
 * Memory errors: If processing large contracts, you may need to increase the available memory for the Python process.
 
-* Issues related to dependencies: `rm -rf uv.lock`, `uv cache clean`, `uv venv`, and run `uv pip install -r requirements.txt -v`.
 
 * Issues related to `Python quit unexpectedly`: Check [this stackoverflow article](https://stackoverflow.com/questions/59888499/macos-catalina-python-quit-unexpectedly-error).
 
 * `reportMissingImports` error from pyright after installing the package: This might occur when installing new libraries while VSCode is running. Open the command pallete (ctrl + shift + p) and run the Python: Restart language server task.
+
+<hr >
+
+## Ref. Repository Structure
+
+```
+.
+.venv/                  [.gitignore]    # stores uv venv
+│
+└── data/               [.gitignore]
+│     └──raw/                           # stores raw data
+│     └──preprocessed/                  # stores processed data after imputation and engineering
+│
+└── models/             [.gitignore]    # stores serialized model after training and tuning
+│     └──dfn/                           # deep feedforward network
+│     └──gbm/                           # light gbm
+│     └──en/                            # elastic net
+│     └──production/                    # models to be stored in S3 for production use
+|
+└── notebooks/                          # stores experimentation notebooks
+│
+└── src/                                # core functions
+│     └──_utils/                        # utility functions
+│     └──data_handling/                 # functions to engineer features
+│     └──model/                         # functions to train, tune, validate models
+│     │     └── sklearn_model
+│     │     └── torch_model
+│     │     └── ...
+│     └──main.py                        # main script to run the inference locally
+│
+└──app.py                               # Flask application (API endpoints)
+└──pyproject.toml                       # project configuration
+└──.env                [.gitignore]     # environment variables
+└──uv.lock                              # dependency locking
+└──Dockerfile                           # for Docker container image
+└──.dockerignore
+└──requirements.txt
+└──.python-version                      # python version locking (3.12)
+```

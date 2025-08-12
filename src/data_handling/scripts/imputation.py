@@ -48,31 +48,32 @@ def _create_imputation_df(original_df, stockcode):
         'unitprice_median': [df_stockcode['unitprice'].median()],
         'unitprice_max': [df_stockcode['unitprice'].max()],
         'unitprice_min': [df_stockcode['unitprice'].min()],
-        'quantity_mean': [df_stockcode['quantity'].mean()],
+        # 'quantity_mean': [df_stockcode['quantity'].mean()],
         'country': [df_stockcode['country'].mode()[0]],
-        'product_avg_quantity_last_month': [df_stockcode['product_avg_quantity_last_month'].iloc[-1]]
+        'product_avg_sales_last_month': [df_stockcode['product_avg_sales_last_month'].iloc[-1]]
     })
     merged_df = pd.merge(imputation_df, customer_latest_by_stockcode, how='cross')
     return merged_df
 
 
-def create_imputation_values_by_stockcode(processed_df, stockcode=None):
+def create_imputation_values_by_stockcode(base_df, stockcode=None):
     if stockcode is None:
-        stockcodes = original_df['stockcode'].unique()
+        stockcodes = base_df['stockcode'].unique()
 
         for st in stockcodes:
-            imputation_df = _create_imputation_df(original_df=processed_df, stockcode=st)
+            imputation_df = _create_imputation_df(original_df=base_df, stockcode=st)
             _, temp_file_path = fetch_imputation_cache_key_and_file_path(stockcode=st)
             imputation_df.to_parquet(temp_file_path, index=False)
             s3_upload(temp_file_path)
             os.remove(temp_file_path)
 
     else:
-        imputation_df = _create_imputation_df(original_df=processed_df, stockcode=stockcode)
+        imputation_df = _create_imputation_df(original_df=base_df, stockcode=stockcode)
         _, temp_file_path = fetch_imputation_cache_key_and_file_path(stockcode=stockcode)
         imputation_df.to_parquet(temp_file_path, index=False)
         s3_upload(temp_file_path)
         os.remove(temp_file_path)
+
 
 
 if __name__ == "__main__":
@@ -83,4 +84,4 @@ if __name__ == "__main__":
     original_df = pd.read_parquet(ORIGINAL_DF_PATH)
     processed_df = pd.read_parquet(PROCESSED_DF_PATH)
 
-    create_imputation_values_by_stockcode(processed_df=processed_df)
+    create_imputation_values_by_stockcode(base_df=processed_df)

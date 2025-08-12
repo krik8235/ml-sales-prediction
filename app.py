@@ -143,7 +143,7 @@ def load_artifacts_primary_model():
     try:
         # load trained processor
         main_logger.info("... loading artifacts - trained dfn ...")
-        input_dim = 65
+        input_dim = 63
         model_data_bytes_io = s3_load(file_path=DFN_FILE_PATH)
 
         if model_data_bytes_io is not None:
@@ -247,7 +247,6 @@ def predict_price(stockcode):
         # define the price range
         min_price, max_price = data.get('unitprice_min', None), data.get('unitprice_max', None)
 
-
         if min_price is None:
             if df_stockcode is not None and not df_stockcode.empty:
                 min_price = df_stockcode['unitprice_min'][0]
@@ -267,7 +266,10 @@ def predict_price(stockcode):
         elif min_price > max_price:
             min_price, max_price = max_price, min_price
 
-        NUM_PRICE_BINS = data.get('num_price_bins', 1000)
+        if not 'unitprice_max' in data and max_price - min_price < 10:
+            max_price = max_price * 3
+
+        NUM_PRICE_BINS = data.get('num_price_bins', 5000)
         price_range = np.linspace(min_price, max_price, NUM_PRICE_BINS)
         main_logger.info(f'price ranges for stockcode {stockcode}: ${min_price} - ${max_price}')
 
@@ -284,11 +286,11 @@ def predict_price(stockcode):
             'invoicedate': [np.datetime64(datetime.datetime.now())] * NUM_PRICE_BINS,
             'invoiceno': [data.get('invoiceno', np.nan)] * NUM_PRICE_BINS,
             'stockcode': [stockcode] * NUM_PRICE_BINS,
-            'quantity': [np.nan] * NUM_PRICE_BINS,
+            'sales': [np.nan] * NUM_PRICE_BINS,
             'customerid': [customerid] * NUM_PRICE_BINS,
             'country': [data.get('country', df_stockcode.loc[0, 'country']) if df_stockcode is not None else np.nan] * NUM_PRICE_BINS,
             'unitprice': price_range,
-            'product_avg_quantity_last_month': [df_stockcode.loc[0, 'product_avg_quantity_last_month'] if df_stockcode is not None else 0] * NUM_PRICE_BINS,
+            'product_avg_sales_last_month': [df_stockcode.loc[0, 'product_avg_sales_last_month'] if df_stockcode is not None else 0] * NUM_PRICE_BINS,
             'is_registered': [True if customerid else False] * NUM_PRICE_BINS,
             'customer_recency_days': [customer_recency_days] * NUM_PRICE_BINS,
             'customer_total_spend_ltm': [customer_total_spend_ltm] * NUM_PRICE_BINS,
@@ -304,7 +306,7 @@ def predict_price(stockcode):
         new_df['invoicedate'] = new_df['invoicedate'].astype(int) / 10 ** 9
 
         # suffle and transform input data
-        target_col = 'quantity'
+        target_col = 'sales'
         X = new_df.copy().drop(target_col, axis=1)
         X = X.sample(frac=1).reset_index(drop=True)
         if preprocessor: X = preprocessor.transform(X)
@@ -319,13 +321,13 @@ def predict_price(stockcode):
                 y_pred = model(input_tensor)
                 y_pred = y_pred.cpu().numpy().flatten()
                 y_pred_actual = np.exp(y_pred + epsilon)
-                main_logger.info(f"primary model's prediction for stockcode {stockcode} - actual quantity (units) {y_pred_actual[0:5]}")
+                main_logger.info(f"primary model's prediction for stockcode {stockcode} - actual sales $ {y_pred_actual[0:5]}")
 
                 if np.isinf(y_pred_actual).any() or (y_pred_actual == 0.0).any() or y_pred_actual is None: # type: ignore
                     if backup_model:
                         y_pred = backup_model.predict(X)
                         y_pred_actual = np.exp(y_pred + epsilon)
-                        main_logger.info(f"backup model's prediction for stockcode {stockcode} - actual quantity (units) {y_pred_actual[0:5]}")
+                        main_logger.info(f"backup model's prediction for stockcode {stockcode} - actual sales $ {y_pred_actual[0:5]}")
 
         elif backup_model:
             try: input_dim = len(backup_model.feature_name_)
@@ -333,26 +335,25 @@ def predict_price(stockcode):
             if X.shape[1] > input_dim: X = X[:, : X.shape[1] - input_dim]
             y_pred = backup_model.predict(X)
             y_pred_actual = np.exp(y_pred + epsilon)
-            main_logger.info(f"backup model's prediction for stockcode {stockcode} -  actual quantity (units) {y_pred_actual[0:5]}")
+            main_logger.info(f"backup model's prediction for stockcode {stockcode} -  actual sales $ {y_pred_actual[0:5]}")
 
         if y_pred_actual is not None:
             df_ = new_df.copy()
-            df_['quantity'] = np.floor(y_pred_actual * 10)
+            df_['sales'] = y_pred_actual * 30
             df_ = df_.sort_values(by='unitprice')
 
-            optimal_row = df_.loc[df_['quantity'].idxmax()]
+            optimal_row = df_.loc[df_['sales'].idxmax()]
             optimal_price = optimal_row['unitprice']
-            best_sales = optimal_row['quantity'] * optimal_price
+            best_sales = optimal_row['sales']
 
             all_outputs = []
             for _, row in df_.iterrows():
                 current_output = {
                     "stockcode": stockcode,
                     "unit_price": float(row['unitprice']),
-                    "predicted_sales": float(row['quantity'] * row['unitprice']),
+                    "predicted_sales": float(row['sales']),
                     "optimal_unit_price": float(optimal_price), # type: ignore
                     "max_predicted_sales": float(best_sales), # type: ignore
-                    "quantity": int(row['quantity'])
                 }
                 all_outputs.append(current_output)
 
