@@ -101,15 +101,15 @@ def get_redis_client():
                 health_check_interval=30,
                 retry_on_timeout=True,
                 retry_on_error=[
-                    redis.exceptions.ConnectionError,
-                    redis.exceptions.TimeoutError
+                    redis.ConnectionError,
+                    redis.TimeoutError
                 ],
                 max_connections=10,            # limit connections for Lambda
                 max_connections_per_node=2     # limit per node
             )
             _redis_client.ping()
             main_logger.info("successfully connected to ElastiCache Redis Cluster (Configuration Endpoint)")
-        except redis.exceptions.ConnectionError as e:
+        except redis.ConnectionError as e:
             main_logger.error(f"could not connect to Redis Cluster: {e}", exc_info=True)
             _redis_client = None
         except Exception as e:
@@ -232,11 +232,11 @@ def predict_price(stockcode):
             cached_prediction_result = _redis_client.get(cache_key_prediction_result_by_stockcode)
             if cached_prediction_result:
                 main_logger.info(f"cached prediction hit for stockcode: {stockcode}")
-                return jsonify(json.loads(cached_prediction_result))
+                return jsonify(json.loads(json.dumps(cached_prediction_result)))
 
             # load historical data of the product (stockcode)
             cached_df_stockcode = _redis_client.get(cache_key_df_stockcode)
-            if cached_df_stockcode: df_stockcode = json.loads(cached_df_stockcode)
+            if cached_df_stockcode: df_stockcode = json.loads(json.dumps(cached_df_stockcode))
 
         if df_stockcode is None:
             df_stockcode_bites_io = s3_load(
@@ -245,20 +245,21 @@ def predict_price(stockcode):
             if df_stockcode_bites_io: df_stockcode = pd.read_parquet(df_stockcode_bites_io)
 
         # define the price range
-        min_price, max_price = data.get('unitprice_min', None), data.get('unitprice_max', None)
+        min_price = float(data.get('unitprice_min', 0.0))
+        max_price = float(data.get('unitprice_max', 0.0))
 
-        if min_price is None:
+        if min_price == 0.0:
             if df_stockcode is not None and not df_stockcode.empty:
                 min_price = df_stockcode['unitprice_min'][0]
                 if min_price < 0.1: min_price = df_stockcode['unitprice_median'][0]
             else:
-                min_price = 2
+                min_price = 2.0
 
-        if max_price is None:
+        if max_price == 0.0:
             if df_stockcode is not None and not df_stockcode.empty:
                 max_price = df_stockcode['unitprice_max'][0]
             else:
-                max_price = 20
+                max_price = 20.0
 
         if min_price == max_price:
             min_price = max(2, min_price * 0.9)
@@ -266,10 +267,10 @@ def predict_price(stockcode):
         elif min_price > max_price:
             min_price, max_price = max_price, min_price
 
-        if not 'unitprice_max' in data and max_price - min_price < 10:
+        if not 'unitprice_max' in data and max_price - min_price < 10.0:
             max_price = max_price * 3
 
-        NUM_PRICE_BINS = data.get('num_price_bins', 5000)
+        NUM_PRICE_BINS = int(data.get('num_price_bins', 5000))
         price_range = np.linspace(min_price, max_price, NUM_PRICE_BINS)
         main_logger.info(f'price ranges for stockcode {stockcode}: ${min_price} - ${max_price}')
 
@@ -482,7 +483,7 @@ def handler(event, context):
         # _redis_client.flushall(target_nodes='all')
         all_keys = _redis_client.keys('*')
         if all_keys:
-            deleted = _redis_client.delete(*all_keys)
+            deleted = _redis_client.delete(*all_keys) # type: ignore
             main_logger.info(f"✅ manually deleted {deleted} keys")
 
     return awsgi.response(app, event, context)
