@@ -1,21 +1,29 @@
-__pycache__/
 .ruff_cache/
 .DS_Store/
-.venv/
-uv.lock
 dist/
 
 .vscode
 *.psd
 *.pdf
+*.png
+*.csv
 [a-f]*.log
 
 
+__pycache__/
+
+.legacy/
+.venv/
+awscli-bundle/
+data/
+notebooks/
+preprocessors/
+
+tests/
+
 tmp/
 
-awscli-bundle/
-
-# only containalizes the best performing models
+models/
 dfn_best/
 dfn_bayesian/
 dfn_grid/
@@ -26,11 +34,8 @@ gbm_best/
 gbm_bayesian/
 gbm_grid/
 
-
 .note
-.legacy/
 
-notebooks/
+.pre-commit-config.yaml
 
-data/
-sales_pred/
+uv.lock

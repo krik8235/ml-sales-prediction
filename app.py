@@ -5,12 +5,12 @@ import time
 import datetime
 import warnings
 import hashlib
-import torch
+import torch # type: ignore
 import pickle
 import pandas as pd
-import numpy as np
+import numpy as np # type: ignore
 import awsgi # type: ignore
-import joblib
+import joblib # type: ignore
 import redis # type: ignore
 import redis.cluster # type: ignore
 from redis.cluster import ClusterNode # type: ignore
@@ -91,7 +91,6 @@ def get_redis_client():
             startup_nodes = [ClusterNode(host=REDIS_HOST, port=REDIS_PORT)]
             _redis_client = redis.cluster.RedisCluster(
                 startup_nodes=startup_nodes,
-                # password=REDIS_PASSWORD,
                 decode_responses=True,
                 skip_full_coverage_check=True,
                 ssl=REDIS_TLS,                  # elasticache has encryption in transit: enabled -> must be true
@@ -251,7 +250,7 @@ def predict_price(stockcode):
         if min_price == 0.0:
             if df_stockcode is not None and not df_stockcode.empty:
                 min_price = df_stockcode['unitprice_min'][0]
-                if min_price < 0.1: min_price = df_stockcode['unitprice_median'][0]
+                if min_price < 0.1: min_price = df_stockcode['unitprice_median'][0] # type: ignore
             else:
                 min_price = 2.0
 
@@ -261,14 +260,14 @@ def predict_price(stockcode):
             else:
                 max_price = 20.0
 
-        if min_price == max_price:
-            min_price = max(2, min_price * 0.9)
+        if min_price == max_price: # type: ignore
+            min_price = max(2, min_price * 0.9)# type: ignore
             max_price = max_price * 1.5 + 0.1
-        elif min_price > max_price:
+        elif min_price > max_price:# type: ignore
             min_price, max_price = max_price, min_price
 
-        if not 'unitprice_max' in data and max_price - min_price < 10.0:
-            max_price = max_price * 3
+        if not 'unitprice_max' in data and max_price - min_price < 10.0:# type: ignore
+            max_price = max_price * 1.5
 
         NUM_PRICE_BINS = int(data.get('num_price_bins', 5000))
         price_range = np.linspace(min_price, max_price, NUM_PRICE_BINS)
@@ -314,7 +313,7 @@ def predict_price(stockcode):
 
         # start prediction
         y_pred_actual = None
-        epsilon = 1e-5
+        epsilon = 0
         if model:
             input_tensor = torch.tensor(X, dtype=torch.float32)
             model.eval()
@@ -340,7 +339,7 @@ def predict_price(stockcode):
 
         if y_pred_actual is not None:
             df_ = new_df.copy()
-            df_['sales'] = y_pred_actual * 30
+            df_['sales'] = y_pred_actual * 365 # annual
             df_ = df_.sort_values(by='unitprice')
 
             optimal_row = df_.loc[df_['sales'].idxmax()]
@@ -351,8 +350,8 @@ def predict_price(stockcode):
             for _, row in df_.iterrows():
                 current_output = {
                     "stockcode": stockcode,
-                    "unit_price": float(row['unitprice']),
-                    "predicted_sales": float(row['sales']),
+                    "unit_price": float(row['unitprice']), # type: ignore
+                    "predicted_sales": float(row['sales']), # type: ignore
                     "optimal_unit_price": float(optimal_price), # type: ignore
                     "max_predicted_sales": float(best_sales), # type: ignore
                 }
