@@ -31,7 +31,7 @@ def create_torch_data_loader(X, y, batch_size: int = 32) -> DataLoader[tuple[tor
     y_final_tensor = torch.tensor(y_np, dtype=torch.float32).view(-1, 1)
 
     dataset_final = TensorDataset(X_final_tensor, y_final_tensor)
-    data_loader = DataLoader(dataset_final, batch_size=batch_size, shuffle=True)
+    data_loader = DataLoader(dataset_final, batch_size=batch_size)
     return data_loader # type: ignore [return-value]
 
 
@@ -110,9 +110,8 @@ def grid_search(X_train, X_val, y_train, y_val, search_space: dict, verbose: boo
         batch_size = current_hparams.get('batch_size', 16)
 
         # set up train/validation data loader
-        X_train_search, X_val_search, y_train_search, y_val_search = train_test_split(
-            X_train, y_train, test_size=10000, shuffle=True, random_state=42
-        )
+        test_size = 10000 if len(X_train) > 15000 else int(len(X_train) * 0.2)
+        X_train_search, X_val_search, y_train_search, y_val_search = train_test_split(X_train, y_train, test_size=test_size, random_state=42)
         train_data_loader = create_torch_data_loader(X=X_train_search, y=y_train_search, batch_size=batch_size)
         val_data_loader = create_torch_data_loader(X=X_val_search, y=y_val_search, batch_size=batch_size)
 
@@ -155,7 +154,14 @@ def grid_search(X_train, X_val, y_train, y_val, search_space: dict, verbose: boo
     main_logger.info("\nall results:")
     for res in results: main_logger.info(f"hparams: {res['hparams']}, avg loss: {res['avg_loss']:.4f}")
 
-    return best_model, optimizer, batch_size
+    checkpoint = {
+        'state_dict': best_model.state_dict(),
+        'hparams': best_hparams,
+        'input_dim': X_train.shape[1],
+        'optimizer': optimizer,
+        'batch_size': batch_size
+    }
+    return best_model, optimizer, batch_size, checkpoint
 
 
 
@@ -170,13 +176,13 @@ def bayesian_optimization(X_train, X_val, y_train, y_val):
     # define objective function for optuna
     def objective(trial):
         # model
-        num_layers = trial.suggest_int('num_layers', 1, 5)
+        num_layers = trial.suggest_int('num_layers', 1, 20)
         batch_norm = trial.suggest_categorical('batch_norm', [True, False])
         dropout_rates = []
         hidden_units_per_layer = []
         for i in range(num_layers):
-            dropout_rates.append(trial.suggest_float(f'dropout_rate_layer_{i}', 0.0, 0.5))
-            hidden_units_per_layer.append(trial.suggest_int(f'n_units_layer_{i}', 16, 128)) # hidden units per layer
+            dropout_rates.append(trial.suggest_float(f'dropout_rate_layer_{i}', 0.0, 0.6))
+            hidden_units_per_layer.append(trial.suggest_int(f'n_units_layer_{i}', 8, 256)) # hidden units per layer
 
         model = DFN(
             input_dim=X_train.shape[1],
@@ -193,14 +199,14 @@ def bayesian_optimization(X_train, X_val, y_train, y_val):
 
         # data loaders
         batch_size = trial.suggest_categorical('batch_size', [32, 64, 128, 256])
-        X_train_search, X_val_search, y_train_search, y_val_search = train_test_split(
-            X_train, y_train, test_size=10000, shuffle=True, random_state=42
-        )
+        test_size = 10000 if len(X_train) > 15000 else int(len(X_train) * 0.2)
+        X_train_search, X_val_search, y_train_search, y_val_search = train_test_split(X_train, y_train, test_size=test_size, random_state=42)
         train_data_loader = create_torch_data_loader(X=X_train_search, y=y_train_search, batch_size=batch_size)
         val_data_loader = create_torch_data_loader(X=X_val_search, y=y_val_search, batch_size=batch_size)
 
         # training
-        num_epochs = trial.suggest_int('num_epochs', 10, 500)
+        # num_epochs = trial.suggest_int('num_epochs', 500, 1000)
+        num_epochs = 3000
         _, best_val_loss = train_model(
             train_data_loader=train_data_loader,
             val_data_loader=val_data_loader,
@@ -252,7 +258,13 @@ def bayesian_optimization(X_train, X_val, y_train, y_val):
         model=best_model,
         optimizer=best_optimizer,
         criterion = criterion,
-        num_epochs=50
+        num_epochs=1000
     )
-
-    return best_model, best_optimizer, best_batch_size
+    checkpoint = {
+        'state_dict': best_model.state_dict(),
+        'hparams': best_hparams,
+        'input_dim': X_train.shape[1],
+        'optimizer': best_optimizer,
+        'batch_size': best_batch_size
+    }
+    return best_model, best_optimizer, best_batch_size, checkpoint

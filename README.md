@@ -27,6 +27,7 @@
   - [Feature engineering](#feature-engineering)
   - [Model retraining](#model-retraining)
   - [Tuning from scratch (with caution)](#tuning-from-scratch-with-caution)
+  - [Tuning for stockcode (with caution)](#tuning-for-stockcode-with-caution)
 - [Deployment](#deployment)
   - [Publishing Docker image](#publishing-docker-image)
   - [Connecting cache storage](#connecting-cache-storage)
@@ -155,6 +156,13 @@ uv run src/main.py
 
 - Before running the script, make sure testing the new script in notebook.
 
+### Tuning for stockcode (with caution)
+
+- Run the main script for stockcode to tune the model based on training data of specific stockcode.
+
+```bash
+uv run src/main_stockcode.py {STOCKCODE} --cache-clear
+```
 
 ## Deployment
 

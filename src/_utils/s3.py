@@ -52,11 +52,9 @@ def s3_load(file_path = None, prefix = '', verbose: bool = False):
 
     if not file_path:
         file_key = _get_latest_s3_file_key(prefix)
-
         if not file_key:
             main_logger.error("failed to find the latest file key. Returning None.")
             return None
-
         file_path = file_key
 
     try:
@@ -81,7 +79,7 @@ def s3_load(file_path = None, prefix = '', verbose: bool = False):
 
     except ClientError as e:
         main_logger.error(f"failed to load file from S3: {e}. return None")
-        return None
+        raise
 
 
 def s3_load_to_temp_file(file_path):
@@ -89,11 +87,11 @@ def s3_load_to_temp_file(file_path):
     S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'ml-sales-pred')
     s3_client = boto3.client('s3', region_name=os.environ.get('AWS_REGION_NAME', 'us-east-1'))
 
-    main_logger.info(f"... downloading {file_path} from S3...")
+    main_logger.info(f"... loading {file_path} from S3...")
     try:
         with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
             s3_client.download_file(Bucket=S3_BUCKET_NAME, Key=file_path, Filename=tmp_file.name)
             return tmp_file.name
     except ClientError as e:
         main_logger.error(f"Error downloading {file_path} from S3: {e}")
-        return None
+        raise

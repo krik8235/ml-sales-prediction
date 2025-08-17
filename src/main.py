@@ -6,6 +6,7 @@ import joblib
 import numpy as np
 import lightgbm as lgb # type: ignore
 from sklearn.linear_model import ElasticNet
+from sklearn.svm import SVR
 from skopt.space import Real, Integer, Categorical # type: ignore
 from dotenv import load_dotenv # type: ignore
 
@@ -20,6 +21,7 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 PRODUCTION_MODEL_FOLDER_PATH = 'models/production'
 DFN_FILE_PATH = os.path.join(PRODUCTION_MODEL_FOLDER_PATH, 'dfn_best.pth')
 GBM_FILE_PATH =  os.path.join(PRODUCTION_MODEL_FOLDER_PATH, 'gbm_best.pth')
+SVR_FILE_PATH = os.path.join(PRODUCTION_MODEL_FOLDER_PATH, 'svr_best.pth')
 EN_FILE_PATH = os.path.join(PRODUCTION_MODEL_FOLDER_PATH, 'en_best.pth')
 
 PREPROCESSOR_PATH = 'preprocessors/column_transformer.pkl'
@@ -46,6 +48,29 @@ sklearn_models = [
             Categorical(['cyclic', 'random'], name='selection'),
             Categorical([True,], name='fit_intercept'),
             Integer(12, 100, name='random_state'),
+        ]
+    },
+    {
+        'model_name': 'svr',
+        'base_model': SVR,
+        'search_space_grid': dict(
+            kernel=['linear', 'poly', 'rbf', 'sigmoid'],
+            degree=[1, 3],
+            gamma=["scale"],
+            tol=[1e-3],
+            C=[1.0],
+            epsilon=[0.1],
+            max_iter=[1000],
+        ),
+        'search_space_bayesian': [
+            Categorical(['linear', 'poly', 'rbf', 'sigmoid'], name='kernel'),
+            Integer(1, 100, name='degree'),
+            Categorical(['scale', 'auto'], name='gamma'),
+            Real(1e-4, 10.0, 'log-uniform', name='coef'),
+            Real(1e-6, 1e-1, 'log-uniform', name='tol'),
+            Real(0.01, 100, 'uniform', name='C'),
+            Real(1e-6, 1e-1, 'log-uniform', name='epsilon'),
+            Integer(1000, 50000, name='max_iter'),
         ]
     },
     {
@@ -103,22 +128,30 @@ if __name__ == '__main__':
     joblib.dump(preprocessor, PREPROCESSOR_PATH)
     s3_upload(PREPROCESSOR_PATH)
 
-    # models
-    # torch dfn (tuning -> save best ver. to local + s3)
-    best_dfn_full_trained = t.main_script(X_train, X_val, X_test, y_train, y_val, y_test)
-    torch.save(best_dfn_full_trained.state_dict(), DFN_FILE_PATH)
+    ## models
+    # torch dfn
+    best_dfn_full_trained, checkpoint = t.main_script(X_train, X_val, y_train, y_val)
+    torch.save(checkpoint, DFN_FILE_PATH)
     s3_upload(file_path=DFN_FILE_PATH)
 
+    # svr
+    best_svr_trained, best_hparams_svr = sk.main_script(X_train, X_val, y_train, y_val, **sklearn_models[1])
+    if best_svr_trained is not None:
+        with open(SVR_FILE_PATH, 'wb') as f:
+            pickle.dump({ 'best_model': best_svr_trained, 'best_hparams': best_hparams_svr }, f)
+        s3_upload(file_path=SVR_FILE_PATH)
+
+
     # elastic net
-    best_en_trained, best_hparams_en = sk.main_script(X_train, X_val, X_test, y_train, y_val, y_test, **sklearn_models[0])
+    best_en_trained, best_hparams_en = sk.main_script(X_train, X_val, y_train, y_val, **sklearn_models[0])
     if best_en_trained is not None:
         with open(EN_FILE_PATH, 'wb') as f:
             pickle.dump({ 'best_model': best_en_trained, 'best_hparams': best_hparams_en }, f)
         s3_upload(file_path=EN_FILE_PATH)
 
     # light gbm
-    X_train, X_val, X_test, y_train, y_val, y_test, _ = data_handling.main_script(is_scale=False)
-    best_gbm_trained, best_hparams_gbm = sk.main_script(X_train, X_val, X_test, y_train, y_val, y_test, **sklearn_models[1])
+    # X_train, X_val, X_test, y_train, y_val, y_test, _ = data_handling.main_script(is_scale=False)
+    best_gbm_trained, best_hparams_gbm = sk.main_script(X_train, X_val, y_train, y_val, **sklearn_models[2])
 
     if best_gbm_trained is not None:
         with open(GBM_FILE_PATH, 'wb') as f:

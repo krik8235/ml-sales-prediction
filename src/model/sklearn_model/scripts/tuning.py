@@ -56,10 +56,10 @@ def run_kfold_validation(
                     callbacks=[lgb.early_stopping(early_stopping_rounds, verbose=False)]
                 )
                 y_pred_val_kf = model.predict(X_val_fold)
-                current_val_mse = mean_squared_error(y_val_fold, y_pred_val_kf)
+                current_val_mse = mean_squared_error(y_val_fold, y_pred_val_kf) # type: ignore
 
                 # check for nan of inf in predictions
-                if np.any(np.isnan(y_pred_val_kf)) or np.any(np.isinf(y_pred_val_kf)):
+                if np.any(np.isnan(y_pred_val_kf)) or np.any(np.isinf(y_pred_val_kf)):  # type: ignore
                     main_logger.warning(f"fold # {fold}: predictions contain NaN or Inf. Returning a high penalty MSE.")
                     mses += 1e10
                 else:
@@ -101,7 +101,7 @@ def run_kfold_validation(
                 # main_logger.info(f"Fold {fold}: Restored model to best state from iteration {best_iteration}.")
 
         y_pred_val_kf = model.predict(X_val_fold)
-        mses += mean_squared_error(y_pred_val_kf, y_val_fold)
+        mses += mean_squared_error(y_pred_val_kf, y_val_fold)  # type: ignore
 
     ave_mse = mses / n_splits
     return ave_mse

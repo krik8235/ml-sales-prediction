@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 import torch.nn as nn
 import optuna # type: ignore
@@ -12,7 +11,7 @@ def train_model(
         optimizer,
         criterion = nn.MSELoss(),
         num_epochs: int = 50,
-        min_delta: float = 1e-5,
+        min_delta: float = 1e-3,
         patience: int = 10,
         trial=None,
         train_data_loader=None, val_data_loader=None,
@@ -33,9 +32,7 @@ def train_model(
     # if not np.all(train_data_loader) or not np.all(val_data_loader):
         # set up train/validation data loader
         try:
-            X_train_search, X_val_search, y_train_search, y_val_search = train_test_split(
-                X_train, y_train, test_size=10000, shuffle=True, random_state=42
-            )
+            X_train_search, X_val_search, y_train_search, y_val_search = train_test_split(X_train, y_train, test_size=10000, random_state=42)
             train_data_loader = create_torch_data_loader(X=X_train_search, y=y_train_search, batch_size=batch_size)
             val_data_loader = create_torch_data_loader(X=X_val_search, y=y_val_search, batch_size=batch_size)
         except:
@@ -47,7 +44,7 @@ def train_model(
     best_val_loss = float('inf')
     epochs_no_improve = 0
     for epoch in range(num_epochs):
-        main_logger.info(f'... starts epoch {epoch + 1} ...')
+        main_logger.info(f'... start epoch {epoch + 1} ...')
         model.train()
         for batch_X, batch_y in train_data_loader:
             batch_X, batch_y = batch_X.to(device), batch_y.to(device)
@@ -60,7 +57,7 @@ def train_model(
                     loss = criterion(outputs, batch_y)
                     if torch.any(torch.isnan(outputs)) or torch.any(torch.isinf(outputs)):
                         main_logger.error('pytorch model returns nan or inf. break the training loop.')
-                        raise Exception()
+                        break
 
                 # create scaled gradients of the loss
                 if scaler is not None:
@@ -98,7 +95,7 @@ def train_model(
 
         val_loss /= len(val_data_loader)
 
-        # execute early stopping
+        # early stopping
         if val_loss < best_val_loss - min_delta:
             best_val_loss = val_loss
             epochs_no_improve = 0
