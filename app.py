@@ -36,6 +36,7 @@ if AWS_LAMBDA_RUNTIME_API is None: load_dotenv(override=True)
 PRODUCTION_MODEL_FOLDER_PATH = 'models/production'
 DFN_FILE_PATH = os.path.join(PRODUCTION_MODEL_FOLDER_PATH, 'dfn_best.pth')
 GBM_FILE_PATH =  os.path.join(PRODUCTION_MODEL_FOLDER_PATH, 'gbm_best.pth')
+SVR_FILE_PATH = os.path.join(PRODUCTION_MODEL_FOLDER_PATH, 'svr_best.pth')
 EN_FILE_PATH = os.path.join(PRODUCTION_MODEL_FOLDER_PATH, 'en_best.pth')
 
 PREPROCESSOR_PATH = 'preprocessors/column_transformer.pkl'
@@ -218,18 +219,30 @@ def load_artifacts_backup_model():
             return
 
     except:
-        main_logger.error(f"failed to load gbm from s3 using pickle. try loading elastic net instead as a backup model.")
+        main_logger.error(f"failed to load gbm from s3 using pickle. try loading svr instead as a backup model.")
         try:
-            main_logger.info('... loading en ...')
-            model_data_bytes_io = s3_load(file_path=EN_FILE_PATH)
+            main_logger.info('... loading svr ...')
+            model_data_bytes_io = s3_load(file_path=SVR_FILE_PATH)
             if model_data_bytes_io:
                 model_data_bytes_io.seek(0)
                 loaded_dict = pickle.load(model_data_bytes_io)
                 backup_model = loaded_dict['best_model']
-                main_logger.info("... successfully loaded elastic net ...")
+                main_logger.info("... successfully loaded svr ...")
                 return
         except Exception as e:
-            main_logger.critical(f"failed to load elastic net from s3 using pickle: {e}")
+            main_logger.critical(f"failed to load svr from s3 using pickle. try loading elastic net instead as a backup model.")
+            try:
+                main_logger.info('... loading en ...')
+                model_data_bytes_io = s3_load(file_path=EN_FILE_PATH)
+                if model_data_bytes_io:
+                    model_data_bytes_io.seek(0)
+                    loaded_dict = pickle.load(model_data_bytes_io)
+                    backup_model = loaded_dict['best_model']
+                    main_logger.info("... successfully loaded elastic net ...")
+                    return
+            except Exception as e:
+                    main_logger.critical(f"failed to load backup model: {e}")
+
 
 
 # api endpoints
