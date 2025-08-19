@@ -97,7 +97,14 @@ uv lock --upgrade
 uv sync
 ```
 
-- AssertionError/module mismatch errors: Set up default Python version using `.pyenv`
+or
+
+```bash
+pip env
+pip install -r requirements.txt
+```
+
+- AssertionError/module mismatch errors: Set up the default Python version using `.pyenv`
 
 ```bash
 pyenv install 3.12.8

@@ -51,7 +51,6 @@ def main_script(target_col: str = 'quantity', is_scale: bool = True, impute_stoc
     if cat_cols:
         for col in cat_cols: df[col] = df[col].astype('string')
 
-
     # creates train, val, test datasets
     y = df[target_col]
     X = df.copy().drop(target_col, axis='columns')

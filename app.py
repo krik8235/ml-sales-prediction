@@ -182,7 +182,6 @@ def load_model(stockcode: str = ''):
             load_artifacts_backup_model()
 
 
-
 def load_artifacts_primary_model():
     global model
 
@@ -343,7 +342,7 @@ def predict_price(stockcode):
             try: load_model(stockcode=stockcode)
             except: pass
 
-            # start prediction
+            # perform inference
             y_pred_actual = None
             epsilon = 0
             if model:
