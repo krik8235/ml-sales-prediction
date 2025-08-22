@@ -4,7 +4,6 @@ import pandas as pd
 from src._utils import main_logger
 
 
-
 def handle_feature_engineering(df: pd.DataFrame, verbose: bool = False) -> pd.DataFrame:
 
     pd.set_option('future.no_silent_downcasting', True)

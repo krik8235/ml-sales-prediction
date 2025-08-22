@@ -400,6 +400,11 @@ def predict_price(stockcode):
                     }
                     all_outputs.append(current_output)
 
+                # store the prediction results in cache
+                if all_outputs and _redis_client is not None:
+                    serialized_data = json.dumps(all_outputs)
+                    _redis_client.set(cache_key_prediction_result_by_stockcode, serialized_data, ex=3600) # expire in an hour
+
                 main_logger.info(f'optimal price: $ {optimal_price:,.2f}, quantity: {optimal_quantity:,}, maximum sales: $ {best_sales:,.2f}')
                 return jsonify(all_outputs)
 
