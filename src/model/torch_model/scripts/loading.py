@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 
 from src.model.torch_model.scripts.pretrained_base import DFN
+from src.model.torch_model.scripts.tuning import handle_optimizer
 from src._utils import main_logger, MODEL_SAVE_PATH, retrieve_file_path
 
 
@@ -11,20 +12,7 @@ device_type = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.m
 device = torch.device(device_type)
 
 
-def construct_model_from_state(input_dim: int, state: dict):
-    """Reconstruct a torch model from a state """
-
-    model =  DFN(input_dim=input_dim)
-
-    try:
-        model.to(device=device)
-        model.load_state_dict(state)
-    except:
-        main_logger.error('Failed to laod model')
-
-    return model
-
-
+# for inference
 def load_model(checkpoint: dict = {}, model_name: str = 'dfn', trig: str ='best', file_path=None) -> nn.Module:
     """
     Loads and reconstructs the best performing model from the tuning result:
@@ -32,17 +20,19 @@ def load_model(checkpoint: dict = {}, model_name: str = 'dfn', trig: str ='best'
         'state_dict': best_model.state_dict(),
         'hparams': best_hparams,
         'input_dim': X_train.shape[1],
-        'optimizer': best_optimizer,
-        'batch_size': best_batch_size
+        'optimizer_name': optimizer_name,
+        'lr': lr,
+        'optimizer_state_dict': optimizer.state_dict(),
+        'batch_size': batch_size
     }
     """
     try:
-        if not file_path:
-            folder_path = os.path.join(MODEL_SAVE_PATH, f'{model_name}_{trig}')
-            file_path, _ = retrieve_file_path(folder_path=folder_path)
-            if not file_path: raise Exception('file path not found.')
-
         if not checkpoint:
+            if not file_path:
+                folder_path = os.path.join(MODEL_SAVE_PATH, f'{model_name}_{trig}')
+                file_path, _ = retrieve_file_path(folder_path=folder_path)
+                if not file_path: raise Exception('file path not found.')
+
             checkpoint = torch.load(file_path, weights_only=False, map_location=device)
 
         state_dict = checkpoint['state_dict']
@@ -67,12 +57,43 @@ def load_model(checkpoint: dict = {}, model_name: str = 'dfn', trig: str ='best'
             batch_norm=hparams.get('batch_norm', False),
             dropout_rates=dropout_rates
         )
-
         model.load_state_dict(state_dict, strict=True)
 
         main_logger.info(f'model loaded and reconstructed using the best hparams: {hparams}')
         return model
 
     except Exception as e:
-        main_logger.error(f"failed to load PyTorch model: {e}. Returning new untrained model with state_dict.")
+        main_logger.error(f"failed to load PyTorch model: {e}")
         raise Exception('failed to load the model.')
+
+
+# for training
+def load_model_and_optimizer(checkpoint: dict = {}, model_name: str = 'dfn', trig: str ='best', file_path=None, device_type=None):
+    try:
+        # device
+        device_type = device_type if device_type else "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
+        device = torch.device(device_type)
+
+        # model
+        model = load_model(checkpoint=checkpoint, file_path=file_path)
+        model.to(device)
+
+        # optimizer
+        if not checkpoint:
+            if not file_path:
+                folder_path = os.path.join(MODEL_SAVE_PATH, f'{model_name}_{trig}')
+                file_path, _ = retrieve_file_path(folder_path=folder_path)
+                if not file_path: raise Exception('file path not found.')
+
+            checkpoint = torch.load(file_path, weights_only=False, map_location=device)
+
+        optimizer_name = checkpoint['optimizer_name']
+        lr = checkpoint['lr']
+        optimizer = handle_optimizer(optimizer_name=optimizer_name, model=model, lr=lr)
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+
+        return model, optimizer, checkpoint
+
+    except Exception as e:
+        main_logger.error(f"failed to load the optimizer: {e}")
+        raise Exception('failed to load the optimizer.')

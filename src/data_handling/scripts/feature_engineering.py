@@ -91,7 +91,6 @@ def handle_feature_engineering(df: pd.DataFrame, verbose: bool = False) -> pd.Da
     df_fin['invoiceno'] = df_fin['invoiceno'].fillna(value='unknown')
 
 
-
     # imputation (values referred to stockcode)
     df_imputed = df_fin.copy().sort_values(by='stockcode').reset_index(drop=True)
     df_stockcode = df_imputed.groupby('stockcode', as_index=False).agg(
@@ -108,7 +107,7 @@ def handle_feature_engineering(df: pd.DataFrame, verbose: bool = False) -> pd.Da
 
 
     # transform sales to logged values
-    alpha = 1e-10
+    alpha = 0
     df_fin['quantity'] = np.log1p(df_fin['quantity'] + alpha)
 
     if verbose: main_logger.info(df_fin.info())

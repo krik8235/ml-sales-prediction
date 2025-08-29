@@ -29,8 +29,6 @@ def train_model(
     scaler = torch.GradScaler(device=device_type) if device_type == 'cuba' else None
 
     if train_data_loader is None or val_data_loader is None:
-    # if not np.all(train_data_loader) or not np.all(val_data_loader):
-        # set up train/validation data loader
         try:
             X_train_search, X_val_search, y_train_search, y_val_search = train_test_split(X_train, y_train, test_size=10000, random_state=42)
             train_data_loader = create_torch_data_loader(X=X_train_search, y=y_train_search, batch_size=batch_size)
@@ -51,7 +49,7 @@ def train_model(
             optimizer.zero_grad()
 
             try:
-                # pytorch's AMP system automatically handles the casting of tensors to Float16 for operations that benefit from it (like the large matrix multiplications in nn.Linear layers) and keeps them in Float32 for operations that might suffer from reduced precision (like nn.BatchNorm1d often does, or the loss calculation).
+                # pytorch's AMP system automatically handles the casting of tensors to Float16 or keeps them in Float32
                 with torch.autocast(device_type=device_type):
                     outputs = model(batch_X)
                     loss = criterion(outputs, batch_y)
@@ -86,7 +84,7 @@ def train_model(
         model.eval()
         val_loss = 0.0
 
-        # switch the grad mode (suspend grad computation)
+        # switch the grad mode
         with torch.inference_mode():
             for batch_X_val, batch_y_val in val_data_loader:
                 batch_X_val, batch_y_val = batch_X_val.to(device), batch_y_val.to(device)

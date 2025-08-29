@@ -1,21 +1,18 @@
 import torch.nn as nn
-import numpy as np
 
 import src.model.torch_model.scripts as t
 from src._utils import main_logger
 
 
-def main_script(X_train, X_val, y_train, y_val, should_local_save: bool = True, grid: bool = False) -> tuple[nn.Module, dict]:
-    """
-    Tunes the PyTorch model using GridSearch and Bayesian Optimization.
-    Then, stores the search results on optimal models as timestamped files in the local storage.
-    Lastly, selects and returns the best performing model out of all search trials.
-    The best performing model is retrained on the full input data (X) before saving.
-    """
+def main_script(
+        X_train, X_val, y_train, y_val, should_local_save: bool = True, grid: bool = False, n_trials: int = 50
+    ) -> tuple[nn.Module, dict]:
 
     # bayesian optimization
     main_logger.info('... start bayesian optimization for DFN ...')
-    best_dfn, best_optimizer, best_batch_size, best_checkpoint = t.bayesian_optimization(X_train, X_val, y_train, y_val)
+    best_dfn, best_optimizer, best_batch_size, best_checkpoint = t.bayesian_optimization(
+        X_train, X_val, y_train, y_val, n_trials=n_trials
+    )
     if should_local_save: t.save_model_to_local(checkpoint=best_checkpoint, trig='bayesian')
 
 
@@ -47,14 +44,13 @@ def main_script(X_train, X_val, y_train, y_val, should_local_save: bool = True, 
         best_checkpoint = checkpoint_grid if rmsle_test_dfn_grid < rmsle_test_dfn_bayesian else best_checkpoint
 
 
-    # retrain the best model w the train + val dataset
-    # X, y = np.concatenate([X_train, X_val, X_test], axis=0), np.concatenate([y_train, y_val, y_test], axis=0)
-    X_tv, y_tv = np.concatenate([X_train, X_val], axis=0), np.concatenate([y_train, y_val], axis=0)
-    best_dfn_full_trained, _ = t.train_model(
-        X_train=X_tv, y_train=y_tv, model=best_dfn, optimizer=best_optimizer, batch_size=best_batch_size, num_epochs=1000
-    )
-    best_checkpoint['model_state_dict'] = best_dfn_full_trained.state_dict()
+    # # retrain the best model w the train + val dataset
+    # X_tv, y_tv = np.concatenate([X_train, X_val], axis=0), np.concatenate([y_train, y_val], axis=0)
+    # best_dfn_full_trained, _ = t.train_model(
+    #     X_train=X_tv, y_train=y_tv, model=best_dfn, optimizer=best_optimizer, batch_size=best_batch_size, num_epochs=1000
+    # )
+    # best_checkpoint['state_dict'] = best_dfn_full_trained.state_dict()
 
-    # save the retrained best model to local
+    # save the retrained model to local
     if should_local_save: t.save_model_to_local(checkpoint=best_checkpoint, trig='best')
-    return best_dfn_full_trained, best_checkpoint
+    return best_dfn, best_checkpoint

@@ -23,7 +23,7 @@ dependencies = [
     "scikit-optimize>=0.10.2",
     "tensorflow>=2.19.0",
     "torch>=2.7.1",
-    "waitress>=3.0.2"
+    "waitress>=3.0.2",
 ]
 
 [project.urls]

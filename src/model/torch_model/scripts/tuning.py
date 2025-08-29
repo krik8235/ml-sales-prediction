@@ -35,7 +35,7 @@ def create_torch_data_loader(X, y, batch_size: int = 32) -> DataLoader[tuple[tor
     return data_loader # type: ignore [return-value]
 
 
-def _handle_optimizer(optimizer_name: str, model: nn.Module, lr: float, **kwargs):
+def handle_optimizer(optimizer_name: str, model: nn.Module, lr: float, **kwargs):
     """
     An utility function to define and return the optimizer in torch.optim format.
     """
@@ -81,11 +81,11 @@ def construct_model_and_optimizer(input_dim, hparams = dict()):
     ).to(device)
 
     # optimizer
-    learning_rate = hparams.get('learning_rate', backup_hparams.get('learning_rate', 0.00042474594783356774))
+    lr = hparams.get('learning_rate', backup_hparams.get('learning_rate', 0.00042474594783356774))
     optimizer_name = hparams.get('optimizer_name', backup_hparams.get('optimizer','rmsprop'))
-    optimizer = _handle_optimizer(optimizer_name=optimizer_name, model=model, lr=learning_rate)
+    optimizer = handle_optimizer(optimizer_name=optimizer_name, model=model, lr=lr)
 
-    return model, optimizer
+    return model, optimizer, optimizer_name, lr
 
 
 
@@ -106,12 +106,14 @@ def grid_search(X_train, X_val, y_train, y_val, search_space: dict, verbose: boo
         if verbose: main_logger.info(f"testing combination {i+1}: {combo}")
 
         current_hparams = dict(zip(keys, combo))
-        model, optimizer = construct_model_and_optimizer(hparams=current_hparams, input_dim=X_train.shape[1])
-        batch_size = current_hparams.get('batch_size', 16)
+        model, optimizer, optimizer_name, lr = construct_model_and_optimizer(hparams=current_hparams, input_dim=X_train.shape[1])
+        batch_size = current_hparams.get('batch_size', 32)
 
         # set up train/validation data loader
         test_size = 10000 if len(X_train) > 15000 else int(len(X_train) * 0.2)
-        X_train_search, X_val_search, y_train_search, y_val_search = train_test_split(X_train, y_train, test_size=test_size, random_state=42)
+        X_train_search, X_val_search, y_train_search, y_val_search = train_test_split(
+            X_train, y_train, test_size=test_size, random_state=42
+        )
         train_data_loader = create_torch_data_loader(X=X_train_search, y=y_train_search, batch_size=batch_size)
         val_data_loader = create_torch_data_loader(X=X_val_search, y=y_val_search, batch_size=batch_size)
 
@@ -158,14 +160,16 @@ def grid_search(X_train, X_val, y_train, y_val, search_space: dict, verbose: boo
         'state_dict': best_model.state_dict(),
         'hparams': best_hparams,
         'input_dim': X_train.shape[1],
-        'optimizer': optimizer,
+        'optimizer_name': optimizer_name,
+        'lr': lr,
+        'optimizer_state_dict': optimizer.state_dict(),
         'batch_size': batch_size
     }
     return best_model, optimizer, batch_size, checkpoint
 
 
 
-def bayesian_optimization(X_train, X_val, y_train, y_val):
+def bayesian_optimization(X_train, X_val, y_train, y_val, n_trials: int = 50):
     """
     Runs Bayesian Optimization to search the best hyperparameters.
     """
@@ -195,17 +199,18 @@ def bayesian_optimization(X_train, X_val, y_train, y_val):
         # optimizer
         learning_rate = trial.suggest_float('learning_rate', 1e-10, 1e-1, log=True)
         optimizer_name = trial.suggest_categorical('optimizer', ['adam', 'rmsprop', 'sgd', 'adamw', 'adamax', 'adadelta', 'radam'])
-        optimizer = _handle_optimizer(optimizer_name=optimizer_name, model=model, lr=learning_rate)
+        optimizer = handle_optimizer(optimizer_name=optimizer_name, model=model, lr=learning_rate)
 
         # data loaders
         batch_size = trial.suggest_categorical('batch_size', [32, 64, 128, 256])
         test_size = 10000 if len(X_train) > 15000 else int(len(X_train) * 0.2)
-        X_train_search, X_val_search, y_train_search, y_val_search = train_test_split(X_train, y_train, test_size=test_size, random_state=42)
+        X_train_search, X_val_search, y_train_search, y_val_search = train_test_split(
+            X_train, y_train, test_size=test_size, random_state=42
+        )
         train_data_loader = create_torch_data_loader(X=X_train_search, y=y_train_search, batch_size=batch_size)
         val_data_loader = create_torch_data_loader(X=X_val_search, y=y_val_search, batch_size=batch_size)
 
         # training
-        # num_epochs = trial.suggest_int('num_epochs', 500, 1000)
         num_epochs = 3000
         _, best_val_loss = train_model(
             train_data_loader=train_data_loader,
@@ -221,15 +226,15 @@ def bayesian_optimization(X_train, X_val, y_train, y_val):
 
     # start optimization
     study = optuna.create_study(direction='minimize', sampler=optuna.samplers.TPESampler())
-    study.optimize(objective, n_trials=50, timeout=600)
-    main_logger.info(f"Number of finished trials: {len(study.trials)}")
-    main_logger.info(f"Number of pruned trials: {len(study.get_trials(deepcopy=False, states=[optuna.trial.TrialState.PRUNED]))}")
+    study.optimize(objective, n_trials=n_trials, timeout=600)
+    main_logger.info(f"number of finished trials: {len(study.trials)}")
+    main_logger.info(f"number of pruned trials: {len(study.get_trials(deepcopy=False, states=[optuna.trial.TrialState.PRUNED]))}")
 
     # best found
     best_trial = study.best_trial
     best_hparams = best_trial.params
 
-    main_logger.info(f" ... bayesian optimization completed ... \nbest found in trial #{best_trial.number}\nbest validation loss: {best_trial.value:.4f}\nbest hyperparameteres: {best_hparams}")
+    main_logger.info(f" ... bayesian optimization completed ... \nbest found in trial #{best_trial.number}\nbest validation loss: {best_trial.value:.4f}\nbest hyperparameters: {best_hparams}")
 
     # construct best model and best optimizer
     best_lr = best_hparams['learning_rate']
@@ -245,7 +250,7 @@ def bayesian_optimization(X_train, X_val, y_train, y_val):
 
     # construct best optimizer
     best_optimizer_name = best_hparams['optimizer']
-    best_optimizer = _handle_optimizer(optimizer_name=best_optimizer_name, model=best_model, lr=best_lr)
+    best_optimizer = handle_optimizer(optimizer_name=best_optimizer_name, model=best_model, lr=best_lr)
 
     # data loaders
     train_data_loader = create_torch_data_loader(X=X_train, y=y_train, batch_size=best_batch_size)
@@ -260,11 +265,14 @@ def bayesian_optimization(X_train, X_val, y_train, y_val):
         criterion = criterion,
         num_epochs=1000
     )
+
     checkpoint = {
         'state_dict': best_model.state_dict(),
         'hparams': best_hparams,
         'input_dim': X_train.shape[1],
-        'optimizer': best_optimizer,
+        'optimizer_name': best_optimizer_name,
+        'lr': best_lr,
+        'optimizer_state_dict': best_optimizer.state_dict(),
         'batch_size': best_batch_size
     }
     return best_model, best_optimizer, best_batch_size, checkpoint

@@ -19,7 +19,7 @@ def make_prediction(X, y, model=None, criterion = nn.MSELoss()) -> tuple[np.ndar
     from src.model.torch_model.scripts import create_torch_data_loader, load_model
 
     # load model
-    model = model if model else load_model(input_dim=X.shape[1], model_name='dfn', trig='best')
+    model = model if model else load_model(model_name='dfn', trig='best')
     if model is None: raise Exception('No model found.')
 
     model.to(device)

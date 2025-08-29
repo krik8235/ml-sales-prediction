@@ -150,7 +150,7 @@ def load_preprocessor():
 
 def load_model(stockcode: str = ''):
     global model, backup_model
-    # input_dim = X.shape[1] if X is not None else 64
+
     if stockcode:
         DFN_FILE_PATH_STOCKCODE = os.path.join(PRODUCTION_MODEL_FOLDER_PATH, f'dfn_best_{stockcode}.pth')
         try:
@@ -159,7 +159,7 @@ def load_model(stockcode: str = ''):
             checkpoint = torch.load(model_data_bytes_io, weights_only=False, map_location=device) # type: ignore
             model = t.scripts.load_model(checkpoint=checkpoint, file_path=DFN_FILE_PATH_STOCKCODE)
             model.eval()
-            main_logger.info('loaded trained dfn by stockcode')
+            main_logger.info(f'loaded trained dfn by stockcode: {stockcode}')
         except:
             try:
                 main_logger.info("... loading artifacts - trained dfn ...")
@@ -324,6 +324,7 @@ def predict_price(stockcode):
         if not 'unitprice_max' in data and max_price - min_price < 10.0:
             max_price = max_price * 5
 
+
         NUM_PRICE_BINS = int(data.get('num_price_bins', 100))
         price_range = np.linspace(min_price, max_price, NUM_PRICE_BINS)
         main_logger.info(f'price range for stockcode {stockcode}: ${min_price} - ${max_price}')
@@ -331,7 +332,10 @@ def predict_price(stockcode):
         if X_test is not None:
             # create df
             price_range_df = pd.DataFrame({ 'unitprice': price_range })
-            test_sample = X_test.sample(n=1000, random_state=42) # type: ignore
+            test_sample = X_test.sample(n=1200, random_state=42, ignore_index=True) # type: ignore
+
+            # test_sample = X_test[X_test['stockcode'] == stockcode]
+            # if test_sample.empty: test_sample = X_test.sample(n=1200, random_state=42, ignore_index=True)
             test_sample_merged = test_sample.merge(price_range_df, how='cross') if X_test is not None else price_range_df
             test_sample_merged.drop('unitprice_x', axis=1, inplace=True)
             test_sample_merged.rename(columns={'unitprice_y': 'unitprice'}, inplace=True)
@@ -375,10 +379,10 @@ def predict_price(stockcode):
                 df_ = df_.sort_values(by='unitprice')
 
                 df_results = df_.groupby('unitprice').agg(
-                    quantity=('quantity', 'median'),
+                    quantity=('quantity', 'mean'),
                     quantity_min=('quantity', 'min'),
                     quantity_max=('quantity', 'max'),
-                    sales=('sales', 'median'),
+                    sales=('sales', 'mean'),
                 ).reset_index()
 
                 optimal_row = df_results.loc[df_results['sales'].idxmax()]
@@ -405,7 +409,7 @@ def predict_price(stockcode):
                     serialized_data = json.dumps(all_outputs)
                     _redis_client.set(cache_key_prediction_result_by_stockcode, serialized_data, ex=3600) # expire in an hour
 
-                main_logger.info(f'optimal price: $ {optimal_price:,.2f}, quantity: {optimal_quantity:,}, maximum sales: $ {best_sales:,.2f}')
+                main_logger.info(f'optimal price: $ {optimal_price:,.2f}, quantity: {optimal_quantity:,.0f}, maximum sales: $ {best_sales:,.2f}')
                 return jsonify(all_outputs)
 
         return jsonify([])
@@ -415,7 +419,7 @@ def predict_price(stockcode):
         return jsonify([])
 
 
-# sage maker's standard endpoint
+# sagemaker's standard endpoint
 @app.route('/ping', methods=['GET'])
 def ping():
     return '', 200
@@ -465,7 +469,7 @@ main_logger.info(f"x test loading took: {time.time() - start_time:.2f} seconds")
 
 def handle_function_url_request(event, context):
     try:
-        # try bypass api gateway
+        # try bypassing api gateway
         path = event['requestContext']['http']['path']
         method = event['requestContext']['http']['method']
         if method == 'POST' and '/predict-price/' in path:

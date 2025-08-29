@@ -116,8 +116,10 @@ if __name__ == '__main__':
     load_dotenv(override=True)
 
     # explicitly disable multithreaded operation - forcing PyTorch to use a single thread for CPU operations
-    os.environ["OMP_NUM_THREADS"] = "1"
-    os.environ["MKL_NUM_THREADS"] = "1"
+    device_type = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
+    if device_type == 'cpu':
+        os.environ["OMP_NUM_THREADS"] = "1"
+        os.environ["MKL_NUM_THREADS"] = "1"
 
     os.makedirs(PRODUCTION_MODEL_FOLDER_PATH, exist_ok=True)
 
