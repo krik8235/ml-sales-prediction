@@ -333,9 +333,6 @@ def predict_price(stockcode):
             # create df
             price_range_df = pd.DataFrame({ 'unitprice': price_range })
             test_sample = X_test.sample(n=1200, random_state=42, ignore_index=True) # type: ignore
-
-            # test_sample = X_test[X_test['stockcode'] == stockcode]
-            # if test_sample.empty: test_sample = X_test.sample(n=1200, random_state=42, ignore_index=True)
             test_sample_merged = test_sample.merge(price_range_df, how='cross') if X_test is not None else price_range_df
             test_sample_merged.drop('unitprice_x', axis=1, inplace=True)
             test_sample_merged.rename(columns={'unitprice_y': 'unitprice'}, inplace=True)
@@ -460,11 +457,6 @@ start_time = time.time()
 load_x_test()
 main_logger.info(f"x test loading took: {time.time() - start_time:.2f} seconds")
 
-# # models
-# start_time = time.time()
-# load_model()
-# main_logger.info(f"model loading took: {time.time() - start_time:.2f} seconds")
-
 
 
 def handle_function_url_request(event, context):
@@ -472,6 +464,7 @@ def handle_function_url_request(event, context):
         # try bypassing api gateway
         path = event['requestContext']['http']['path']
         method = event['requestContext']['http']['method']
+
         if method == 'POST' and '/predict-price/' in path:
             # extract stockcode from path
             stockcode = path.split('/predict-price/')[-1]
