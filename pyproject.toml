@@ -1,7 +1,7 @@
 [project]
 name = "src"
 version = "0.1.0"
-authors = [{ name = "Kuriko Iwai", email = "kuriko@versi0n.io" }]
+authors = [{ name = "Kuriko Iwai", email = 'krik8235@gmail.com' }]
 description = "sales prediction"
 readme = "README.md"
 requires-python = "==3.12.*"
@@ -27,7 +27,7 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://kuriko.vercel.app"
+Homepage = "https://kuriko-iwai.vercel.app/online-commerce-intelligence-hub"
 Repository = "https://github.com/krik8235/ml-sales-prediction"
 Issues = "https://github.com/krik8235/ml-sales-prediction/issues"
 
