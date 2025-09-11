@@ -18,6 +18,7 @@ def test_hello_world(flask_client):
         assert b'Hello, world' in res.data
 
 
+
 @patch('app.t.scripts.load_model')
 @patch('torch.load')
 @patch('app._redis_client', new_callable=MagicMock)
@@ -139,13 +140,13 @@ def test_endpoint_backup_model(
     app.model = None
     app.backup_model = mock_backup_model
 
-    # set the side effect on the load_model attribute of the mocked scripts module
-    mock_load_model_from_scripts.load_model.side_effect = RuntimeError("Primary model loading failed.")
+    # set the side effect directly on the mock object for the function
+    mock_load_model_from_scripts.side_effect = RuntimeError("Primary model loading failed.")
 
     # mock the behavior of preprocessor transform to return a numpy array
     def mock_transform_side_effect(df):
         return np.random.rand(df.shape[0], len(mock_backup_model.feature_name_))
-    mock_preprocessor.transform.side_effect = mock_transform_side_effect # failed
+    mock_preprocessor.transform.side_effect = mock_transform_side_effect
 
     with patch.object(pd, 'read_parquet', return_value=mock_df_expanded):
         response = flask_client.get('/v1/predict-price/85123A')
