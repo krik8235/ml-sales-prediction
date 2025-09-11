@@ -91,9 +91,9 @@ def test_predict_endpoint_primary_model(
 @patch('joblib.load')
 @patch('app.get_redis_client')
 @patch('app.load_model')
-@patch('app.t.scripts')
+@patch('app.t.scripts.load_model')
 def test_endpoint_backup_model(
-    mock_t_scripts,
+    mock_load_model_from_scripts,
     mock_load_model,
     mock_get_redis_client,
     mock_joblib_load,
@@ -140,7 +140,7 @@ def test_endpoint_backup_model(
     app.backup_model = mock_backup_model
 
     # set the side effect on the load_model attribute of the mocked scripts module
-    mock_t_scripts.load_model.side_effect = RuntimeError("Primary model loading failed.")
+    mock_load_model_from_scripts.load_model.side_effect = RuntimeError("Primary model loading failed.")
 
     # mock the behavior of preprocessor transform to return a numpy array
     def mock_transform_side_effect(df):
