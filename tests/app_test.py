@@ -8,9 +8,6 @@ from unittest.mock import patch, MagicMock
 # import scripts to test
 import app
 
-# add cors origin
-os.environ['CORS_ORIGINS'] = 'http://localhost:3000, http://127.0.0.1:3000'
-
 
 def test_hello_world(flask_client):
     """test the root endpoint in a local environment."""

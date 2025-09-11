@@ -1,11 +1,13 @@
 from dotenv import load_dotenv # type: ignore
 load_dotenv(override=True)
 
-# adjust the path to import the main scripts
-import sys
 import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+import sys
+# add cors origin
+os.environ['CORS_ORIGINS'] = 'http://localhost:3000, http://127.0.0.1:3000'
 
+# adjust the path to import the main scripts
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import json
 import pytest
