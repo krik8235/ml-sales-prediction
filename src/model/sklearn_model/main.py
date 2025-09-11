@@ -41,12 +41,13 @@ def main_script(
     match model_name:
         case 'gbm':
             import lightgbm as lgb # type: ignore
-            X_tv, X_test, y_tv, y_test = train_test_split(X_tv, y_tv, test_size=3000, random_state=42)
+            test_size = 3000 / len(X_tv) if len(X_tv) > 10000 else 0.2
+            X_tv, X_test, y_tv, y_test = train_test_split(X_tv, y_tv, test_size=test_size, random_state=42)
             best_model.fit( # type: ignore
                 X_tv, y_tv,
                 eval_set=[(X_test, y_test)],  # type: ignore
                 eval_metric='l2', # type: ignore
-                callbacks=[lgb.early_stopping(10, verbose=False)] # type: ignore
+                callbacks=[lgb.early_stopping(10, verbose=False)], # type: ignore
             )
         case _:
             best_model.fit(X_tv, y_tv) # type: ignore

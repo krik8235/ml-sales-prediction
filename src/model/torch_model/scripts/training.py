@@ -1,3 +1,4 @@
+import math
 import torch
 import torch.nn as nn
 import optuna # type: ignore
@@ -25,8 +26,8 @@ def train_model(
     device_type = device_type if device_type else 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
     device = torch.device(device_type)
 
-    # gradient scaler for stability (only for cuba)
-    scaler = torch.GradScaler(device=device_type) if device_type == 'cuba' else None
+    # gradient scaler for stability (only for cuda)
+    scaler = torch.GradScaler(device=device_type) if device_type == 'cuda' else None
 
     if train_data_loader is None or val_data_loader is None:
         try:
@@ -56,6 +57,11 @@ def train_model(
                     if torch.any(torch.isnan(outputs)) or torch.any(torch.isinf(outputs)):
                         main_logger.error('pytorch model returns nan or inf. break the training loop.')
                         break
+
+                    if not math.isfinite(loss.item()):
+                        main_logger.error('loss is nan or inf. break the training loop.')
+                        break
+
 
                 # create scaled gradients of the loss
                 if scaler is not None:

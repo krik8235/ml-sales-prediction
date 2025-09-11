@@ -2,7 +2,6 @@ import os
 import sys
 import joblib
 import torch
-import warnings
 from dotenv import load_dotenv # type: ignore
 from sklearn.model_selection import train_test_split
 
@@ -10,7 +9,6 @@ import src.data_handling as data_handling
 import src.model.torch_model as t
 from src._utils import s3_upload, main_logger
 
-warnings.filterwarnings('ignore', category=RuntimeWarning)
 
 # paths
 PRODUCTION_MODEL_FOLDER_PATH = 'models/production'

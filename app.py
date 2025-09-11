@@ -51,14 +51,14 @@ try:
     # test boto3 client
     sts_client = boto3.client('sts')
     identity = sts_client.get_caller_identity()
-    main_logger.info(f"✅ Lambda is using role: {identity['Arn']}")
+    main_logger.info(f"✅ Boto3 is using a role: {identity['Arn']}")
 
     # test s3 access
     response = s3_client.head_object(Bucket=S3_BUCKET_NAME, Key=PREPROCESSOR_PATH)
     main_logger.info("✅ S3 access works")
 
 except Exception as e:
-    main_logger.error(f"❌ Lambda credentials/permissions error: {e}")
+    main_logger.error(f"❌ Boto3 / S3 credentials/permissions error: {e}")
 
 
 # flask app config
@@ -285,7 +285,8 @@ def predict_price(stockcode):
             cached_prediction_result = _redis_client.get(cache_key_prediction_result_by_stockcode)
             if cached_prediction_result:
                 main_logger.info(f"cached prediction hit for stockcode: {stockcode}")
-                return jsonify(json.loads(json.dumps(cached_prediction_result)))
+                try: return jsonify(json.loads(cached_prediction_result)) # type: ignore
+                except: return jsonify(json.loads(json.dumps(cached_prediction_result)))
 
             # load historical data of the product (stockcode)
             cached_df_stockcode = _redis_client.get(cache_key_df_stockcode)

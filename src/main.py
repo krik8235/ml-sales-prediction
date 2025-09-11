@@ -1,6 +1,5 @@
 import os
 import torch
-import warnings
 import pickle
 import joblib
 import numpy as np
@@ -15,7 +14,6 @@ import src.model.torch_model as t
 import src.model.sklearn_model as sk
 from src._utils import s3_upload
 
-warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 # paths
 PRODUCTION_MODEL_FOLDER_PATH = 'models/production'
@@ -63,14 +61,14 @@ sklearn_models = [
             max_iter=[1000],
         ),
         'search_space_bayesian': [
-            Categorical(['linear', 'poly', 'rbf', 'sigmoid'], name='kernel'),
-            Integer(1, 100, name='degree'),
+           Categorical(['linear', 'poly', 'rbf', 'sigmoid'], name='kernel'),
+            Integer(2, 5, name='degree'),
             Categorical(['scale', 'auto'], name='gamma'),
-            Real(1e-4, 10.0, 'log-uniform', name='coef0'),
-            Real(1e-6, 1e-1, 'log-uniform', name='tol'),
-            Real(0.01, 100, 'uniform', name='C'),
-            Real(1e-6, 1e-1, 'log-uniform', name='epsilon'),
-            Integer(1000, 50000, name='max_iter'),
+            Real(1e-3, 1.0, 'log-uniform', name='coef0'),
+            Real(1e-4, 1e-2, 'log-uniform', name='tol'),
+            Real(0.1, 100.0, 'log-uniform', name='C'),
+            Real(1e-4, 0.5, 'uniform', name='epsilon'),
+            Integer(1000, 10000, name='max_iter'),
         ]
     },
     {
@@ -91,6 +89,7 @@ sklearn_models = [
             reg_lambda=[0.1],
             random_state=[42],
             n_jobs=[-1],
+            verbosity=-1,
         ),
         'search_space_bayesian': [
             Categorical(['gbdt',], name='boosting_type'),
@@ -111,8 +110,7 @@ sklearn_models = [
     }
 ]
 
-
-if __name__ == '__main__':
+def run_main():
     load_dotenv(override=True)
 
     # explicitly disable multithreaded operation - forcing PyTorch to use a single thread for CPU operations
@@ -128,7 +126,7 @@ if __name__ == '__main__':
 
     # processor
     joblib.dump(preprocessor, PREPROCESSOR_PATH)
-    s3_upload(PREPROCESSOR_PATH)
+    s3_upload(file_path=PREPROCESSOR_PATH)
 
     ## models
     # torch dfn
@@ -160,3 +158,8 @@ if __name__ == '__main__':
             pickle.dump({'best_model': best_gbm_trained, 'best_hparams': best_hparams_gbm }, f)
 
         s3_upload(file_path=GBM_FILE_PATH)
+
+
+
+if __name__ == '__main__':
+    run_main()

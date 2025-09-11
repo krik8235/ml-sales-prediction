@@ -35,7 +35,7 @@ def load_model(model_name: str = 'gbm', trig: str = 'best'):
         if not model and hparams:
             match model_name:
                 case 'gbm':
-                    model = lgb.LGBMRegressor(**hparams)
+                    model = lgb.LGBMRegressor(**hparams, verbosity=-1)
                 case 'en':
                     model = ElasticNet(**hparams)
                 case _:

@@ -49,11 +49,12 @@ def run_kfold_validation(
 
         if isinstance(model, (lgb.LGBMRegressor, lgb.LGBMClassifier)):
             try:
+                setattr(model, 'verbosity', -1)
                 model.fit(
                     X_train_fold, y_train_fold,
                     eval_set=[(X_val_fold, y_val_fold)],
                     eval_metric='l2',                       # 'l2' for MSE
-                    callbacks=[lgb.early_stopping(early_stopping_rounds, verbose=False)]
+                    callbacks=[lgb.early_stopping(early_stopping_rounds, verbose=False)],
                 )
                 y_pred_val_kf = model.predict(X_val_fold)
                 current_val_mse = mean_squared_error(y_val_fold, y_pred_val_kf) # type: ignore
@@ -111,7 +112,11 @@ def run_kfold_validation(
 def _grid_search(X_train, y_train, search_space: dict, base_model) -> tuple[Iterable, dict, float]:
     """Finds optimal hyperparameters via Grid Search and returns trained optimal model, hyperparameters, and best MSE."""
 
-    keys, values = search_space.keys(), search_space.values()
+    safe_search_space = {}
+    for key, value in search_space.items():
+        safe_search_space[key] = value if isinstance(value, (list, tuple, np.ndarray)) else [value]
+
+    keys, values = safe_search_space.keys(), safe_search_space.values()
     all_combinations_tuples = list(product(*values))
 
     all_combinations_list = []
@@ -154,7 +159,9 @@ def run_grid_search(
             case 'gbm':
                 best_model.fit( # type: ignore
                     X_train, y_train,
-                    eval_set=[(X_val, y_val)], eval_metric='l2', callbacks=[lgb.early_stopping(10, verbose=False)] # type: ignore
+                    eval_set=[(X_val, y_val)],
+                    eval_metric='l2',
+                    callbacks=[lgb.early_stopping(10, verbose=False)], # type: ignore
                 )
             case _:
                 best_model.fit(X_train, y_train) # type: ignore
@@ -222,6 +229,6 @@ def run_bayesian_optimization(
 
     else:
         main_logger.error('failed to complete bayesian optimization. return emply model')
-        best_model = ElasticNet() if model_name == 'en' else lgb.LGBMRegressor()
+        best_model = ElasticNet() if model_name == 'en' else lgb.LGBMRegressor(verbosity=-1)
 
     return best_model, best_hparams, rmsle
