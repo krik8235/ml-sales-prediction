@@ -55,6 +55,7 @@ jobs:
 
       - name: run snyk sast and sca
         run: |
+          pip install synk
           snyk ignore --id=SNYK-PYTHON-TORCH-10332643 --reason="No patch available"
           snyk ignore --id=SNYK-PYTHON-TORCH-10332644 --reason="No patch available"
           snyk test --severity-threshold=high --json > snyk_results.json
