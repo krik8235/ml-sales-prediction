@@ -1098,6 +1098,7 @@ dev = [
     { name = "fastparquet" },
     { name = "pyarrow" },
     { name = "pytest" },
+    { name = "synk" },
 ]
 
 [package.metadata]
@@ -1124,6 +1125,7 @@ dev = [
     { name = "fastparquet", specifier = ">=2024.11.0" },
     { name = "pyarrow", specifier = ">=21.0.0" },
     { name = "pytest", specifier = ">=8.4.2" },
+    { name = "synk", specifier = ">=0.0.1" },
 ]
 
 [[package]]
@@ -1157,6 +1159,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/83/d3/803453b36afefb7c2bb238361cd4ae6125a569b4db67cd9e79846ba2d68c/sympy-1.14.0.tar.gz", hash = "sha256:d3d3fe8df1e5a0b42f0e7bdf50541697dbe7d23746e894990c030e2b05e72517", size = 7793921 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a2/09/77d55d46fd61b4a135c444fc97158ef34a095e5681d0a6c10b75bf356191/sympy-1.14.0-py3-none-any.whl", hash = "sha256:e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5", size = 6299353 },
+]
+
+[[package]]
+name = "synk"
+version = "0.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a8/e0/9c875cdbfa313d015c71c939dc6c300021481f934fa1095aa67d34b9bd97/synk-0.0.1.tar.gz", hash = "sha256:cf3f8d937234019e8001b6fbd78c486051feb7dda55749a2818b2b041e12f746", size = 2295 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/75/d3/06a68e7aa84f7bb1c3425cc9f5a737290f18575a23236f21a2a0f2a2620c/synk-0.0.1-py3-none-any.whl", hash = "sha256:60956bcf64eb3be5636516ea1fe3620cc145ecfcc80ef2209900aa6b2c2b13f8", size = 3199 },
 ]
 
 [[package]]
