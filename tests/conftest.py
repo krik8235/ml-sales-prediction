@@ -19,44 +19,40 @@ import app
 from src._utils import main_logger
 
 
-@pytest.fixture(autouse=True) # applies the fixture to all tests automatically
+@pytest.fixture(autouse=True) # apply the fixture to all tests automatically
 def mock_external_dependencies(monkeypatch):
-
+    """
+    A unified fixture to mock all external dependencies like S3 and Joblib.
+    """
     main_logger.info("... mocking external dependencies for pytest run ...")
 
     # mock the s3_load_to_temp_file function to prevent s3 access
     def mock_s3_load_to_temp_file(file_path):
-        main_logger.info(f"Mocked s3_load_to_temp_file called for: {file_path}")
-        return "/tmp/mock_file" # Return a dummy path
+        return "/tmp/mock_file"
 
     # mock the s3_load function
     def mock_s3_load(file_path):
-        main_logger.info(f"Mocked s3_load called for: {file_path}")
-        return MagicMock() # Return a mock object
+        return MagicMock()
 
-    # mock the boto3 client to prevent log errors about missing credentials
-    def mock_boto3_client(service_name, region_name=None):
-        main_logger.info(f"Mocked boto3.client called for service: {service_name}")
-        mock_client = MagicMock()
-        if service_name == 's3':
-            mock_client.head_object.return_value = {} # Pretend the object exists
-        elif service_name == 'sts':
-            mock_client.get_caller_identity.return_value = {'Arn': 'mock_arn'}
-        return mock_client
-
-
-    # mock the joblib.load to prevent file system access
+    # mock the s3_load function
     def mock_joblib_load(file_path):
-        main_logger.info(f"Mocked joblib.load called for: {file_path}")
         mock_preprocessor = MagicMock()
         mock_preprocessor.transform.return_value = np.array([[0.1, 0.2, 0.3, 0.4]])
         return mock_preprocessor
 
-    # apply all the mocks using monkeypatch
+    # mock the boto3 client to prevent log errors about missing credentials
+    def mock_boto3_client(service_name, region_name=None):
+        mock_client = MagicMock()
+        if service_name == 's3':
+            mock_client.head_object.return_value = {}
+        elif service_name == 'sts':
+            mock_client.get_caller_identity.return_value = {'Arn': 'mock_arn'}
+        return mock_client
+
     monkeypatch.setattr(app, 's3_load_to_temp_file', mock_s3_load_to_temp_file)
     monkeypatch.setattr(app, 's3_load', mock_s3_load)
-    monkeypatch.setattr(app.joblib, 'load', mock_joblib_load)
     monkeypatch.setattr('boto3.client', mock_boto3_client)
+    monkeypatch.setattr(app.joblib, 'load', mock_joblib_load)
 
 
 @pytest.fixture

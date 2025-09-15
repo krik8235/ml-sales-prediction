@@ -125,27 +125,28 @@ def get_redis_client():
 
 def load_x_test():
     global X_test
-    main_logger.info("... loading x_test ...")
-    try:
-        x_test_io = s3_load(file_path=X_TEST_PATH)
-        if x_test_io is not None:
-            X_test = pd.read_parquet(x_test_io)
-        else:
-            main_logger.error('failed to load the x_test parquet file')
-    except Exception as e:
-        main_logger.error(e)
+    if not os.environ.get('PYTEST_RUN'):
+        main_logger.info("... loading x_test ...")
+        try:
+            x_test_io = s3_load(file_path=X_TEST_PATH)
+            if x_test_io is not None:
+                X_test = pd.read_parquet(x_test_io)
+            else:
+                main_logger.error('failed to load the x_test parquet file')
+        except Exception as e:
+            main_logger.error(e)
 
 
 def load_preprocessor():
     global preprocessor
-
-    main_logger.info("... loading transformer ...")
-    try:
-        preprocessor_tempfile_path = s3_load_to_temp_file(PREPROCESSOR_PATH)
-        preprocessor = joblib.load(preprocessor_tempfile_path)
-        os.remove(preprocessor_tempfile_path)
-    except:
-        preprocessor = joblib.load(PREPROCESSOR_PATH)
+    if not os.environ.get('PYTEST_RUN'):
+        main_logger.info("... loading transformer ...")
+        try:
+            preprocessor_tempfile_path = s3_load_to_temp_file(PREPROCESSOR_PATH)
+            preprocessor = joblib.load(preprocessor_tempfile_path)
+            os.remove(preprocessor_tempfile_path)
+        except:
+            preprocessor = joblib.load(PREPROCESSOR_PATH)
 
 
 def load_model(stockcode: str = ''):
