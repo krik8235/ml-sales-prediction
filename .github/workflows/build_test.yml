@@ -47,10 +47,10 @@ jobs:
       # static analysis and dependency scanning with snyk
       - name: run snyk sast and sca
         uses: snyk/actions/python@master # a unified tool to analyze sast and sca
-        with:
-          args: '--file=requirements.txt'
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: '--file=requirements.txt'
 
       # config aws credentials using oicd
       - name: config aws credentials
