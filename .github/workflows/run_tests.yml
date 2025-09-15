@@ -1,4 +1,4 @@
-name: Manually Runs PyTest
+name: Manual PyTest Run
 
 on:
   workflow_dispatch:

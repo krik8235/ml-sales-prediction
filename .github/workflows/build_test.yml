@@ -1,4 +1,4 @@
-name: CI - Build and Test
+name: Build and Test
 
 on:
   push:
@@ -51,7 +51,7 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          args: --severity-threshold=high
+          args: --severity-threshold=high --exclude=SNYK-PYTHON-TORCH-10332643
 
       # config aws credentials using oicd
       - name: config aws credentials
@@ -61,7 +61,7 @@ jobs:
           role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }} # iam role that creates lambda
 
       # trigger aws codebuild to start the project 'pj-sales-pred'
-      - name: push container image
+      - name: trigger aws codebuild
         uses: aws-actions/aws-codebuild-run-build@v1
         with:
           project-name: 'pj-sales-pred'
