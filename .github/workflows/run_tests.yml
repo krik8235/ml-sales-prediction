@@ -1,6 +1,7 @@
-name: Run Tests
+name: Manually Runs PyTest
 
-# on: [pull_request, push]
+on:
+  workflow_dispatch:
 
 permissions:
   contents: write
