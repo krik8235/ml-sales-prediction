@@ -34,6 +34,5 @@ notebooks/
 
 
 # temp -
-build_test.yml
 deploy_production.yml
 deploy_staging.yml

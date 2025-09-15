@@ -1,0 +1,67 @@
+name: CI - Build and Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  AWS_REGION_NAME: ${{ secrets.AWS_REGION_NAME }}
+  API_ENDPOINT: ${{ secrets.API_ENDPOINT }}
+  CLIENT_A: ${{ secrets.CLIENT_A }}
+
+jobs:
+  build_and_scan:
+
+  # set permissions for oicd (open id connect) authentication with aws
+  permissions:
+    id-token: write  # for requesting the jwt token from GitHub's OIDC provider.
+    contents: read   # for checking out the code in the repo
+
+  runs-on: ubuntu-latest
+  timeout-minutes: 60
+
+  steps:
+    - name: checkout repository code
+      uses: actions/checkout@v4
+
+    - name: set up python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements_dev.txt
+
+    - name: run pytest
+      run: pytest
+      env:
+        CORS_ORIGINS: 'http://localhost:3000,http://127.0.0.1:3000'
+
+
+    # static analysis and dependency scanning with snyk
+    - name: run snyk sast and sca
+      uses: snyk/actions/python@master # a unified tool to analyze sast and sca
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+
+    # config aws credentials using oicd
+    - name: config aws credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-region: ${{ secrets.AWS_REGION_NAME }}
+        role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }} # iam role that creates lambda
+
+
+    # trigger aws codebuild to start the project 'pj-sales-pred'
+    - name: push container image
+      uses: aws-actions/aws-codebuild-run-build@v1
+      with:
+        project-name: 'pj-sales-pred'

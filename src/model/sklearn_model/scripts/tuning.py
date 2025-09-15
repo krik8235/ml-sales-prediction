@@ -10,7 +10,6 @@ from sklearn.metrics import mean_squared_error
 from skopt import gp_minimize # type: ignore
 
 from src.model.sklearn_model.scripts.predict import make_prediction
-from src.model.sklearn_model.scripts.saving import save_model_to_local
 from src._utils import main_logger
 
 import warnings

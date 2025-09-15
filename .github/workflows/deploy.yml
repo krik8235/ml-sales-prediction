@@ -1,0 +1,115 @@
+name: Deploy Containerized Lambda
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'The branch to deploy from'
+        required: true
+        default: 'develop'
+        type: choice
+        options:
+          - main
+          - develop
+
+env:
+  AWS_REGION: ${{ secrets.AWS_REGION_NAME }}
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+  LAMBDA_FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
+  CODEBUILD_PROJECT: ${{ secrets.CODEBUILD_PROJECT }}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.inputs.branch }}
+
+    # config aws credentials using oicd
+    - name: config aws credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-region: ${{ secrets.AWS_REGION_NAME }}
+        role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }} # iam role that creates lambda
+
+    - name: set environment variables
+      run: |
+        echo "BRANCH_NAME=${{ github.event.inputs.branch }}" >> $GITHUB_ENV
+        echo "SHORT_SHA=${GITHUB_SHA::8}" >> $GITHUB_ENV
+
+    - name: check lambda function exists
+      run: |
+        aws lambda get-function --function-name ${{ env.LAMBDA_FUNCTION_NAME }} --region ${{ env.AWS_REGION }}
+
+    - name: start codebuild for container build
+      uses: aws-actions/aws-codebuild-run-build@v1
+      id: codebuild
+      with:
+        project-name: ${{ env.CODEBUILD_PROJECT }}
+        source-version: ${{ github.event.inputs.branch }}
+        environment-variables-override: |
+          [
+            {
+              "name": "GITHUB_REF",
+              "value": "refs/heads/${{ github.event.inputs.branch }}"
+            },
+            {
+              "name": "BRANCH_NAME",
+              "value": "${{ env.BRANCH_NAME }}"
+            },
+            {
+              "name": "ECR_REPOSITORY_NAME",
+              "value": "${{ env.ECR_REPOSITORY }}"
+            },
+            {
+              "name": "LAMBDA_FUNCTION_NAME",
+              "value": "${{ env.LAMBDA_FUNCTION_NAME }}"
+            }
+          ]
+
+    - name: verify lambda updates
+      run: |
+        echo " ... verifying lambda function update ..."
+        CURRENT_IMAGE=$(aws lambda get-function \
+          --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
+          --region ${{ env.AWS_REGION }} \
+          --query 'Code.ImageUri' \
+          --output text)
+
+        echo "... current Lambda image: $CURRENT_IMAGE"
+
+        if [[ $CURRENT_IMAGE == *"${{ github.event.inputs.branch }}"* ]]; then
+          echo "✅ lambda function successfully updated with new image"
+        else
+          echo "❌ lambda function update may have failed"
+          exit 1
+        fi
+
+    - name: test lambda function (optional)
+      if: github.event.inputs.branch == 'main'
+      run: |
+        echo "... testing Lambda function..."
+        aws lambda invoke \
+          --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
+          --region ${{ env.AWS_REGION }} \
+          --payload '{"test": true}' \
+          --cli-binary-format raw-in-base64-out \
+          response.json
+
+        cat response.json
+        echo "Lambda test completed"
+
+    - name: update lambda environment variables (if needed)
+      if: github.event.inputs.branch == 'main'
+      run: |
+        aws lambda update-function-configuration \
+          --function-name ${{ env.LAMBDA_FUNCTION_NAME }} \
+          --region ${{ env.AWS_REGION }} \
+          --environment Variables='{
+            "ENVIRONMENT": "production",
+            "VERSION": "${{ github.sha }}",
+            "DEPLOY_TIME": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
+          }'
