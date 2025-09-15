@@ -46,15 +46,11 @@ jobs:
           PYTEST_RUN: true
 
       # static analysis and dependency scanning with snyk
-      - name: setup synk
-        uses: snyk/actions/setup@master
-
       - name: run snyk sast
         uses: snyk/actions/python@master
         with:
           command: test
           args: --severity-threshold=high --policy-path=.synk
-          python-version: '3.12'
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
@@ -63,7 +59,6 @@ jobs:
         with:
           command: code test
           args: --severity-threshold=high --policy-path=.synk
-          python-version: '3.12'
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
