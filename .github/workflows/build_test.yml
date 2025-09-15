@@ -46,21 +46,13 @@ jobs:
           PYTEST_RUN: true
 
       # static analysis and dependency scanning with snyk
-      - name: run snyk sast and sca
-        uses: snyk/actions/python-3.12@master # a unified tool to analyze sast and sca
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      - name: setup synk
+        uses: snyk/actions/setup-snyk@v1.2.0
         with:
-          args: --severity-threshold=high --policy-path=.snyk
+          snyk-token: ${{ secrets.SNYK_TOKEN }}
 
-      # - name: run snyk sast and sca
-      #   run: |
-      #     npm install -g synk
-      #     snyk ignore --id=SNYK-PYTHON-TORCH-10332643 --reason="No patch available"
-      #     snyk ignore --id=SNYK-PYTHON-TORCH-10332644 --reason="No patch available"
-      #     snyk test --severity-threshold=high --json > snyk_results.json
-      #   env:
-      #     SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      - name: run snyk sast and sca
+        run: snyk code test --severity-threshold=high && snyk test --severity-threshold=high
 
       # config aws credentials using oicd
       - name: config aws credentials
