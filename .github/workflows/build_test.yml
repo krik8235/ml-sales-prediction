@@ -50,6 +50,8 @@ jobs:
         uses: snyk/actions/python-3.12@master # a unified tool to analyze sast and sca
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
 
       # config aws credentials using oicd
       - name: config aws credentials
