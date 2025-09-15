@@ -31,11 +31,12 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: 'pip'
 
       - name: install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -r requirements.txt --exclude torch
           pip install -r requirements_dev.txt
           pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 
@@ -47,7 +48,7 @@ jobs:
 
       # static analysis and dependency scanning with snyk
       - name: run snyk sast and sca
-        uses: snyk/actions/python@master # a unified tool to analyze sast and sca
+        uses: snyk/actions/python-3.12@master # a unified tool to analyze sast and sca
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
