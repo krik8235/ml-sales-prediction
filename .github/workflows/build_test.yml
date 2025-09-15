@@ -47,12 +47,17 @@ jobs:
 
       # static analysis and dependency scanning with snyk
       - name: setup synk
-        uses: snyk/actions/setup-snyk@v1.2.0
+        uses: snyk/actions/setup@master
         with:
+          python-version: '3.12'
           snyk-token: ${{ secrets.SNYK_TOKEN }}
 
       - name: run snyk sast and sca
-        run: snyk code test --severity-threshold=high && snyk test --severity-threshold=high
+        run: |
+          synk ignore --id=SNYK-PYTHON-TORCH-10332643 --reason="no fix available"
+          synk ignore --id=SNYK-PYTHON-TORCH-10332644 --reason="no fix available"
+          snyk code test --severity-threshold=high
+          snyk test --severity-threshold=high
 
       # config aws credentials using oicd
       - name: config aws credentials
