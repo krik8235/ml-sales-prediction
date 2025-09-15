@@ -1,9 +1,0 @@
-ignore:
-  SNYK-PYTHON-TORCH-10332643:
-    - '*':
-      reason: "No direct upgrade or patch available for this issue."
-      expires: "2030-01-01T00:00:00.000Z"
-  SNYK-PYTHON-TORCH-10332644:
-    - '*':
-      reason: "No direct upgrade or patch available for this issue."
-      expires: "2030-01-01T00:00:00.000Z"

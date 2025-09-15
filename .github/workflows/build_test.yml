@@ -45,9 +45,19 @@ jobs:
           CORS_ORIGINS: 'http://localhost:3000,http://127.0.0.1:3000'
           PYTEST_RUN: true
 
-      # static analysis and dependency scanning with snyk
+      # # static analysis and dependency scanning with snyk
+      # - name: run snyk sast and sca
+      #   uses: snyk/actions/python-3.12@master # a unified tool to analyze sast and sca
+      #   env:
+      #     SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      #   with:
+      #     args: --severity-threshold=high --exclude=SNYK-PYTHON-TORCH-10332643
+
       - name: run snyk sast and sca
-        uses: snyk/actions/python-3.12@master # a unified tool to analyze sast and sca
+        run: |
+          snyk ignore --id=SNYK-PYTHON-TORCH-10332643 --reason="No patch available"
+          snyk ignore --id=SNYK-PYTHON-TORCH-10332644 --reason="No patch available"
+          snyk test --severity-threshold=high --json > snyk_results.json
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
