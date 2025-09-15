@@ -51,7 +51,7 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          args: --severity-threshold=high
+          args: --severity-threshold=high --policy-path=.snyk
 
       # - name: run snyk sast and sca
       #   run: |
