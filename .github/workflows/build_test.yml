@@ -52,25 +52,48 @@ jobs:
           python-version: '3.12'
           snyk-token: ${{ secrets.SNYK_TOKEN }}
 
-      - name: ignore vulnerability 1
-        uses: snyk/actions/snyk-cli@master
-        with:
-          args: ignore --id=SNYK-PYTHON-TORCH-10332643 --reason="no fix available"
-
-      - name: ignore vulnerability 2
-        uses: snyk/actions/snyk-cli@master
-        with:
-          args: ignore --id=SNYK-PYTHON-TORCH-10332644 --reason="no fix available"
-
       - name: run snyk sast
-        uses: snyk/actions/snyk-cli@master
+        uses: snyk/actions/python@master
         with:
-          args: code test --severity-threshold=high
+          command: test
+          args: --severity-threshold=high --policy-path=.synk
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
       - name: run snyk sca
-        uses: snyk/actions/snyk-cli@master
+        uses: snyk/actions/python@master
         with:
-          args: test --severity-threshold=high
+          command: code test
+          args: --severity-threshold=high --policy-path=.synk
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+
+      # - name: setup synk
+      #   uses: snyk/actions/setup@master
+      #   with:
+      #     python-version: '3.12'
+      #     snyk-token: ${{ secrets.SNYK_TOKEN }}
+
+      # - name: ignore vulnerability 1
+      #   uses: snyk/actions/snyk-cli@master
+      #   with:
+      #     args: ignore --id=SNYK-PYTHON-TORCH-10332643 --reason="no fix available"
+
+      # - name: ignore vulnerability 2
+      #   uses: snyk/actions/snyk-cli@master
+      #   with:
+      #     args: ignore --id=SNYK-PYTHON-TORCH-10332644 --reason="no fix available"
+
+      # - name: run snyk sast
+      #   uses: snyk/actions/snyk-cli@master
+      #   with:
+      #     args: code test --severity-threshold=high
+
+      # - name: run snyk sca
+      #   uses: snyk/actions/snyk-cli@master
+      #   with:
+      #     args: test --severity-threshold=high
 
       # - name: run snyk sast and sca
       #   run: |
