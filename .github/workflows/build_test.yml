@@ -60,8 +60,6 @@ jobs:
           snyk test --severity-threshold=high --json > snyk_results.json
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          args: --severity-threshold=high
 
       # config aws credentials using oicd
       - name: config aws credentials
