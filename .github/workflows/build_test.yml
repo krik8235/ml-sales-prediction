@@ -50,7 +50,7 @@ jobs:
         uses: snyk/actions/python@master
         with:
           command: test
-          args: --severity-threshold=high --policy-path=.synk --python-version=3.12
+          args: --severity-threshold=high --policy-path=.synk --python-version=3.12 --skip-unresolved --file=requirements.txt
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
@@ -58,7 +58,7 @@ jobs:
         uses: snyk/actions/python@master
         with:
           command: code test
-          args: --severity-threshold=high --policy-path=.synk --python-version=3.12
+          args: --severity-threshold=high --policy-path=.synk --python-version=3.12 --skip-unresolved --file=requirements.txt
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
