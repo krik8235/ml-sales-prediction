@@ -51,7 +51,7 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          args: --severity-threshold=high --exclude=SNYK-PYTHON-TORCH-10332643
+          args: --severity-threshold=high
 
       # config aws credentials using oicd
       - name: config aws credentials
