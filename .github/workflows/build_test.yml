@@ -49,7 +49,6 @@ jobs:
         uses: snyk/actions/python@master # a unified tool to analyze sast and sca
         with:
           args: '--file=requirements.txt --file=requirements_dev.txt'
-          python-version: '3.12'
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
