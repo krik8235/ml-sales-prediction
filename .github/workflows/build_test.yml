@@ -38,7 +38,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt --exclude torch
           pip install -r requirements_dev.txt
-          pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 
       - name: run pytest
         run: pytest
@@ -51,8 +50,6 @@ jobs:
         uses: snyk/actions/python-3.12@master # a unified tool to analyze sast and sca
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        with:
-          args: '--file=requirements.txt'
 
       # config aws credentials using oicd
       - name: config aws credentials
