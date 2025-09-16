@@ -2,12 +2,12 @@ version: 0.2
 
 env:
   variables:
-    # # Default environment variables
-    # AWS_DEFAULT_REGION:  ${{ secrets.AWS_REGION_NAME }}
-    # AWS_ACCOUNT_ID:  ${{ secrets.AWS_ACCOUNT_ID }}
-    # ECR_REPOSITORY_NAME: ${{ secrets.ECR_REPOSITORY }}
-    # LAMBDA_FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
-    # IMAGE_REPO_NAME: ${{ secrets.IMAGE_REPO_NAME }}
+    # Default environment variables
+    AWS_DEFAULT_REGION: default
+    AWS_ACCOUNT_ID:  default
+    ECR_REPOSITORY_NAME: default
+    LAMBDA_FUNCTION_NAME: default
+    IMAGE_REPO_NAME: default
     IMAGE_TAG: latest
 
   # parameter-store:
