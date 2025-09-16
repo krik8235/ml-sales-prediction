@@ -1,14 +1,14 @@
 version: 0.2
 
-env:
-  variables:
-    # Default environment variables
-    AWS_DEFAULT_REGION: us-east-1
-    AWS_ACCOUNT_ID: "473344230259"
-    ECR_REPOSITORY_NAME: my-app
-    LAMBDA_FUNCTION_NAME: my-app
-    IMAGE_REPO_NAME: my-app
-    IMAGE_TAG: latest
+# env:
+#   variables:
+    # # Default environment variables
+    # AWS_DEFAULT_REGION: us-east-1
+    # AWS_ACCOUNT_ID: "473344230259"
+    # ECR_REPOSITORY_NAME: my-app
+    # LAMBDA_FUNCTION_NAME: my-app
+    # IMAGE_REPO_NAME: my-app
+    # IMAGE_TAG: latest
 
   # parameter-store:
   #   # any parameters in Systems Manager Parameter Store
@@ -23,16 +23,16 @@ env:
 phases:
   pre_build:
     commands:
-      - echo "=== Pre-build Phase Started ==="
-      - echo "AWS Account ID: $AWS_ACCOUNT_ID"
-      - echo "AWS Region: $AWS_DEFAULT_REGION"
-      - echo "ECR Repository: $ECR_REPOSITORY_NAME"
-      - echo "Lambda Function: $LAMBDA_FUNCTION_NAME"
-      - echo "GitHub SHA: $GITHUB_SHA"
-      - echo "Build Type: $BUILD_TYPE"
-      - echo "Branch: $BRANCH_NAME"
+      # - echo "=== Pre-build Phase Started ==="
+      # - echo "AWS Account ID: $AWS_ACCOUNT_ID"
+      # - echo "AWS Region: $AWS_DEFAULT_REGION"
+      # - echo "ECR Repository: $ECR_REPOSITORY_NAME"
+      # - echo "Lambda Function: $LAMBDA_FUNCTION_NAME"
+      # - echo "GitHub SHA: $GITHUB_SHA"
+      # - echo "Build Type: $BUILD_TYPE"
+      # - echo "Branch: $BRANCH_NAME"
 
-      # Login to Amazon ECR
+      # login to Amazon ECR
       - echo "Logging in to Amazon ECR..."
       - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
 
