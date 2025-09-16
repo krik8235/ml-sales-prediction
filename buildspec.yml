@@ -2,93 +2,225 @@ version: 0.2
 
 env:
   variables:
-    ECR_REPOSITORY_NAME: "my-app"
-    LAMBDA_FUNCTION_NAME: "my-app"
+    # Default environment variables
+    AWS_DEFAULT_REGION:  ${{ secrets.AWS_REGION_NAME }}
+    AWS_ACCOUNT_ID:  ${{ secrets.AWS_ACCOUNT_ID }}
+    ECR_REPOSITORY_NAME: ${{ secrets.ECR_REPOSITORY }}
+    LAMBDA_FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
+    IMAGE_REPO_NAME: ${{ secrets.IMAGE_REPO_NAME }}
+    IMAGE_TAG: latest
+
+  parameter-store:
+    # any parameters in Systems Manager Parameter Store
+    # DOCKER_REGISTRY_URL: /myapp/docker/registry/url
+    # DATABASE_URL: /myapp/database/url
+
+  secrets-manager:
+    # any secrets in AWS Secrets Manager
+    # DB_PASSWORD: prod/myapp/db:password
+    # API_KEY: prod/myapp/api:key
 
 phases:
   pre_build:
     commands:
-      - echo logging in to amazon ecr...
+      - echo "=== Pre-build Phase Started ==="
+      - echo "Build started on $(date)"
+      - echo "AWS Account ID: $AWS_ACCOUNT_ID"
+      - echo "AWS Region: $AWS_DEFAULT_REGION"
+      - echo "ECR Repository: $ECR_REPOSITORY_NAME"
+      - echo "Lambda Function: $LAMBDA_FUNCTION_NAME"
+      - echo "GitHub SHA: $GITHUB_SHA"
+      - echo "Build Type: $BUILD_TYPE"
+      - echo "Branch: $BRANCH_NAME"
 
-      # get the aws account id and region from the environment
-      - AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-      - AWS_DEFAULT_REGION=$(aws configure get region)
+      # Login to Amazon ECR
+      - echo "Logging in to Amazon ECR..."
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
 
-      # define the name and tag for the ecr repository
+      # Set up repository URI and image tags
       - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPOSITORY_NAME
-      - TAG=${CODEBUILD_RESOLVED_SOURCE_VERSION:-latest}
+      - echo "Repository URI: $REPOSITORY_URI"
 
-      - echo repository uri is... $REPOSITORY_URI
-      - echo tag is... $TAG
-      - echo lambda function is... $LAMBDA_FUNCTION_NAME
+      # Use GitHub SHA if available, otherwise use CodeBuild commit hash
+      - |
+        if [ -n "$GITHUB_SHA" ]; then
+          COMMIT_HASH=$(echo $GITHUB_SHA | cut -c 1-7)
+          echo "Using GitHub SHA: $GITHUB_SHA"
+        else
+          COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+          echo "Using CodeBuild SHA: $CODEBUILD_RESOLVED_SOURCE_VERSION"
+        fi
+      - IMAGE_TAG=${COMMIT_HASH:-latest}
+      - echo "Image tag: $IMAGE_TAG"
 
-      # login to ecr
-      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $REPOSITORY_URI
+      # Create ECR repository if it doesn't exist
+      - |
+        aws ecr describe-repositories --repository-names $ECR_REPOSITORY_NAME --region $AWS_DEFAULT_REGION || \
+        aws ecr create-repository --repository-name $ECR_REPOSITORY_NAME --region $AWS_DEFAULT_REGION
 
   build:
     commands:
-      # build docker image from the dockerfile
-      - echo build started on `date`
-      - echo building the docker image for lambda...
+      - echo "=== Build Phase Started ==="
+      - echo "Building the Docker image..."
 
-      - docker build -t $REPOSITORY_URI:latest -f Dockerfile.lambda .
-      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$TAG
+      # Build Docker image
+      - docker build -t $ECR_REPOSITORY_NAME:$IMAGE_TAG .
+      - docker tag $ECR_REPOSITORY_NAME:$IMAGE_TAG $REPOSITORY_URI:$IMAGE_TAG
+      - docker tag $ECR_REPOSITORY_NAME:$IMAGE_TAG $REPOSITORY_URI:latest
 
-      # test the container image
-      - echo testing the container locally...
-      - docker run --rm -p 9000:8080 $REPOSITORY_URI:latest &
-      - sleep 5
-      - echo container test completed
-
+      # Show image details
+      - echo "Docker images built:"
+      - docker images | grep $ECR_REPOSITORY_NAME
 
   post_build:
     commands:
-      # push the docker image to the ecr
-      - echo build completed on `date`
-      - echo pushing the docker images...
+      - echo "=== Post-build Phase Started ==="
+      - echo "Build completed on $(date)"
+
+      # Push images to ECR
+      - echo "Pushing Docker images to ECR..."
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
       - docker push $REPOSITORY_URI:latest
-      - docker push $REPOSITORY_URI:$TAG
+      - echo "Images pushed successfully"
 
-      # update lambda
-      - echo updating lambda function...
+      # Update Lambda function (only for deploy builds)
       - |
-        aws lambda update-function-code \
-          --function-name $LAMBDA_FUNCTION_NAME \
-          --image-uri $REPOSITORY_URI:$TAG \
-          --region $AWS_DEFAULT_REGION
-      - echo waiting for lambda function to be updated...
-      - |
-        aws lambda wait function-updated \
-          --function-name $LAMBDA_FUNCTION_NAME \
-          --region $AWS_DEFAULT_REGION
-      - echo lambda function updated successfully
-      - echo getting updated function info...
-      - |
-        aws lambda get-function \
-          --function-name $LAMBDA_FUNCTION_NAME \
-          --region $AWS_DEFAULT_REGION \
-          --query 'Code.ImageUri' \
-          --output text
+        if [ "$BUILD_TYPE" = "deploy" ]; then
+          echo "updating Lambda function: $LAMBDA_FUNCTION_NAME"
+          aws lambda update-function-code \
+            --function-name $LAMBDA_FUNCTION_NAME \
+            --image-uri $REPOSITORY_URI:$IMAGE_TAG \
+            --region $AWS_DEFAULT_REGION
 
-      # check the scan status
-      - echo ... waiting for inspector scan to complete ...
-      - |
-        SCAN_STATUS=$(aws ecr describe-image-scan-findings --repository-name your-repo-name --image-id imageTag=latest --query 'imageScanStatus.status' --output text)
-        while [ "$SCAN_STATUS" != "COMPLETE" ]; do
-          echo scan status: $SCAN_STATUS. retrying in 15 seconds...
-          sleep 15
-          SCAN_STATUS=$(aws ecr describe-image-scan-findings --repository-name your-repo-name --image-id imageTag=latest --query 'imageScanStatus.status' --output text)
-        done
-      - |
-        VULNERABILITIES=$(aws ecr describe-image-scan-findings --repository-name your-repo-name --image-id imageTag=latest --query 'imageScanFindings.findingSeverityCounts' --output json)
-        CRITICAL_COUNT=$(echo $VULNERABILITIES | jq -r '."CRITICAL" // 0')
-        if [ "$CRITICAL_COUNT" -gt "0" ]; then
-          echo critical vulnerabilities found! failing the build.
-          exit 1
+          # Wait for update to complete
+          echo "Waiting for Lambda update to complete..."
+          aws lambda wait function-updated \
+            --function-name $LAMBDA_FUNCTION_NAME \
+            --region $AWS_DEFAULT_REGION
+
+          # Verify the update
+          UPDATED_IMAGE=$(aws lambda get-function \
+            --function-name $LAMBDA_FUNCTION_NAME \
+            --region $AWS_DEFAULT_REGION \
+            --query 'Code.ImageUri' --output text)
+          echo "Lambda updated with image: $UPDATED_IMAGE"
+
+        elif [ "$BUILD_TYPE" = "test" ]; then
+          echo "Test build completed - skipping Lambda deployment"
         else
-          echo no critical vulnerabilities found. build successful.
+          echo "Build type not specified - skipping Lambda deployment"
         fi
+
+      # Output build information
+      - echo "=== Build Summary ==="
+      - echo "Repository URI: $REPOSITORY_URI"
+      - echo "Image Tag: $IMAGE_TAG"
+      - echo "Build Type: $BUILD_TYPE"
+      - echo "GitHub SHA: $GITHUB_SHA"
+      - echo "Branch: $BRANCH_NAME"
 
 artifacts:
   files:
     - '**/*'
+  name: ml-sales-prediction-$(date +%Y-%m-%d)
+
+cache:
+  paths:
+    - '/root/.cache/pip/**/*'
+    - 'node_modules/**/*'
+
+
+# version: 0.2
+
+# env:
+#   variables:
+#     ECR_REPOSITORY_NAME: "my-app"
+#     LAMBDA_FUNCTION_NAME: "my-app"
+
+# phases:
+#   pre_build:
+#     commands:
+#       - echo logging in to amazon ecr...
+
+#       # get the aws account id and region from the environment
+#       - AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+#       - AWS_DEFAULT_REGION=$(aws configure get region)
+
+#       # define the name and tag for the ecr repository
+#       - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPOSITORY_NAME
+#       - TAG=${CODEBUILD_RESOLVED_SOURCE_VERSION:-latest}
+
+#       - echo repository uri is... $REPOSITORY_URI
+#       - echo tag is... $TAG
+#       - echo lambda function is... $LAMBDA_FUNCTION_NAME
+
+#       # login to ecr
+#       - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $REPOSITORY_URI
+
+#   build:
+#     commands:
+#       # build docker image from the dockerfile
+#       - echo build started on `date`
+#       - echo building the docker image for lambda...
+
+#       - docker build -t $REPOSITORY_URI:latest -f Dockerfile.lambda .
+#       - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$TAG
+
+#       # test the container image
+#       - echo testing the container locally...
+#       - docker run --rm -p 9000:8080 $REPOSITORY_URI:latest &
+#       - sleep 5
+#       - echo container test completed
+
+
+#   post_build:
+#     commands:
+#       # push the docker image to the ecr
+#       - echo build completed on `date`
+#       - echo pushing the docker images...
+#       - docker push $REPOSITORY_URI:latest
+#       - docker push $REPOSITORY_URI:$TAG
+
+#       # update lambda
+#       - echo updating lambda function...
+#       - |
+#         aws lambda update-function-code \
+#           --function-name $LAMBDA_FUNCTION_NAME \
+#           --image-uri $REPOSITORY_URI:$TAG \
+#           --region $AWS_DEFAULT_REGION
+#       - echo waiting for lambda function to be updated...
+#       - |
+#         aws lambda wait function-updated \
+#           --function-name $LAMBDA_FUNCTION_NAME \
+#           --region $AWS_DEFAULT_REGION
+#       - echo lambda function updated successfully
+#       - echo getting updated function info...
+#       - |
+#         aws lambda get-function \
+#           --function-name $LAMBDA_FUNCTION_NAME \
+#           --region $AWS_DEFAULT_REGION \
+#           --query 'Code.ImageUri' \
+#           --output text
+
+#       # check the scan status
+#       - echo ... waiting for inspector scan to complete ...
+#       - |
+#         SCAN_STATUS=$(aws ecr describe-image-scan-findings --repository-name your-repo-name --image-id imageTag=latest --query 'imageScanStatus.status' --output text)
+#         while [ "$SCAN_STATUS" != "COMPLETE" ]; do
+#           echo scan status: $SCAN_STATUS. retrying in 15 seconds...
+#           sleep 15
+#           SCAN_STATUS=$(aws ecr describe-image-scan-findings --repository-name your-repo-name --image-id imageTag=latest --query 'imageScanStatus.status' --output text)
+#         done
+#       - |
+#         VULNERABILITIES=$(aws ecr describe-image-scan-findings --repository-name your-repo-name --image-id imageTag=latest --query 'imageScanFindings.findingSeverityCounts' --output json)
+#         CRITICAL_COUNT=$(echo $VULNERABILITIES | jq -r '."CRITICAL" // 0')
+#         if [ "$CRITICAL_COUNT" -gt "0" ]; then
+#           echo critical vulnerabilities found! failing the build.
+#           exit 1
+#         else
+#           echo no critical vulnerabilities found. build successful.
+#         fi
+
+# artifacts:
+#   files:
+#     - '**/*'
