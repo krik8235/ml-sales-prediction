@@ -16,7 +16,7 @@ permissions:
   security-events: write
 
 jobs:
-  build_and_scan:
+  build_and_test:
     # set permissions for oicd (open id connect) authentication with aws
     runs-on: ubuntu-latest
     timeout-minutes: 60

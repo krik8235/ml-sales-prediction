@@ -23,6 +23,21 @@ phases:
   pre_build:
     commands:
       # login to ecr
+      - echo "=== Debug ECR Login Issue ==="
+      - echo "Checking AWS credentials..."
+      - aws sts get-caller-identity
+      - echo "Checking Docker version..."
+      - docker --version
+      - echo "Testing ECR get-login-password separately..."
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION > /tmp/ecr_password
+      - echo "ECR password retrieved successfully"
+      - echo "Password length:"
+      - wc -c /tmp/ecr_password
+      - echo "Testing Docker login with ECR..."
+      - cat /tmp/ecr_password | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      - echo "ECR login successful!"
+      - rm /tmp/ecr_password
+
       - echo "... logging in to amazon ecr ..."
       - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
 
