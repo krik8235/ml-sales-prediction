@@ -3,11 +3,11 @@ version: 0.2
 env:
   variables:
     # Default environment variables
-    AWS_DEFAULT_REGION: default
-    AWS_ACCOUNT_ID:  default
-    ECR_REPOSITORY_NAME: default
-    LAMBDA_FUNCTION_NAME: default
-    IMAGE_REPO_NAME: default
+    AWS_DEFAULT_REGION: us-east-1
+    AWS_ACCOUNT_ID: "473344230259"
+    ECR_REPOSITORY_NAME: my-app
+    LAMBDA_FUNCTION_NAME: my-app
+    IMAGE_REPO_NAME: my-app
     IMAGE_TAG: latest
 
   # parameter-store:

@@ -84,12 +84,7 @@ jobs:
           env-vars-for-codebuild: | # pass the env vars to buildspec.yml
             GITHUB_SHA=${{ github.sha }},
             BUILD_TYPE=test,
-            BRANCH_NAME=${{ github.ref_name }},
-            AWS_DEFAULT_REGION:  ${{ secrets.AWS_REGION_NAME }}
-            AWS_ACCOUNT_ID:  ${{ secrets.AWS_ACCOUNT_ID }}
-            ECR_REPOSITORY_NAME: ${{ secrets.ECR_REPOSITORY }}
-            LAMBDA_FUNCTION_NAME: ${{ secrets.LAMBDA_FUNCTION_NAME }}
-            IMAGE_REPO_NAME: ${{ secrets.IMAGE_REPO_NAME }}
+            BRANCH_NAME=${{ github.ref_name }}
 
       - name: check codebuild status
         if: always()
