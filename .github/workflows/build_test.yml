@@ -74,20 +74,45 @@ jobs:
           aws sts get-caller-identity
           echo "✅ oidc authentication successful"
 
-      # trigger aws codebuild to start the project 'pj-sales-pred'
+      # trigger aws codebuild to start the project named  ${{ secrets.CODEBUILD_PROJECT }}
       - name: trigger aws codebuild
         uses: aws-actions/aws-codebuild-run-build@v1
+        id: codebuild
         with:
           project-name: ${{ secrets.CODEBUILD_PROJECT }}
-          source-version: ${{ github.sha }}
-          environment-variables-override: |
-            [
-              {
-                "name": "GITHUB_SHA",
-                "value": "${{ github.sha }}"
-              },
-              {
-                "name": "LAMBDA_FUNCTION_NAME",
-                "value": "${{ env.LAMBDA_FUNCTION_NAME }}"
-              }
-            ]
+          source-version-override: ${{ github.sha }}
+          env-vars-for-codebuild: |
+            GITHUB_SHA=${{ github.sha }},
+            GITHUB_REF=${{ github.ref }},
+            BRANCH_NAME=${{ github.ref_name }},
+            LAMBDA_FUNCTION_NAME=${{ secrets.LAMBDA_FUNCTION_NAME }},
+            BUILD_TYPE=test
+
+      - name: check codebuild status
+        if: always()
+        run: |
+          BUILD_ID="${{ steps.codebuild.outputs.aws-build-id }}"
+          echo "codebuild id: $BUILD_ID"
+
+          BUILD_STATUS=$(aws codebuild batch-get-builds --ids "$BUILD_ID" \
+            --query 'builds[0].buildStatus' --output text)
+          echo "build status: $BUILD_STATUS"
+
+          echo "=== Build Phases ==="
+          aws codebuild batch-get-builds --ids "$BUILD_ID" \
+            --query 'builds[0].phases[].{Phase:phaseType,Status:phaseStatus,Duration:durationInSeconds}' \
+            --output table
+
+          if [ "$BUILD_STATUS" != "SUCCEEDED" ]; then
+            echo "❌ codebuild failed with status: $BUILD_STATUS"
+            exit 1
+          else
+            echo "✅ codebuild completed successfully"
+          fi
+
+      - name: upload build artifacts (Optional)
+        if: always()
+        run: |
+          echo "build completed for commit: ${{ github.sha }}"
+          echo "branch: ${{ github.ref_name }}"
+          echo "build ID: ${{ steps.codebuild.outputs.aws-build-id }}"
