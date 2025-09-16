@@ -110,12 +110,12 @@ phases:
           echo "Build type not specified - skipping Lambda deployment"
         fi
 
-      # Output build information
-      - echo "=== Build Summary ==="
-      - echo "Image Tag: $IMAGE_TAG"
-      - echo "Build Type: $BUILD_TYPE"
-      - echo "GitHub SHA: $GITHUB_SHA"
-      - echo "Branch: $BRANCH_NAME"
+      # # Output build information
+      # - echo "=== Build Summary ==="
+      # - echo "Image Tag: $IMAGE_TAG"
+      # - echo "Build Type: $BUILD_TYPE"
+      # - echo "GitHub SHA: $GITHUB_SHA"
+      # - echo "Branch: $BRANCH_NAME"
 
 artifacts:
   files:
