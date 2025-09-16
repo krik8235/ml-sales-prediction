@@ -68,6 +68,13 @@ jobs:
         with:
           aws-region: ${{ secrets.AWS_REGION_NAME }}
           role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }} # iam role for github actions
+          role-session-name: GitHubActions-Test-${{ github.run_id }}
+
+      - name: test aws access
+        run: |
+          echo "... testing aws authentication ..."
+          aws sts get-caller-identity
+          echo "✅ oidc authentication successful"
 
       # trigger aws codebuild to start the project 'pj-sales-pred'
       - name: trigger aws codebuild
