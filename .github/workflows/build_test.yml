@@ -2,20 +2,18 @@ name: Build and Test
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
-    branches:
-      - main
+    branches: [ main ]
 
 env:
-  AWS_REGION_NAME: ${{ secrets.AWS_REGION_NAME }}
   API_ENDPOINT: ${{ secrets.API_ENDPOINT }}
   CLIENT_A: ${{ secrets.CLIENT_A }}
 
 permissions:
   id-token: write  # for requesting the jwt token from GitHub's OIDC provider.
   contents: read   # for checking out the code in the repo
+  security-events: write
 
 jobs:
   build_and_scan:
@@ -63,12 +61,12 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
       # config aws credentials using oidc
-      - name: config aws credentials
+      - name: configure aws credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ secrets.AWS_REGION_NAME }}
           role-to-assume: ${{ secrets.AWS_IAM_ROLE_ARN }} # iam role for github actions
-          role-session-name: GitHubActions-Test-${{ github.run_id }}
+          role-session-name: GitHubActions-Build-Test-${{ github.run_id }}
 
       - name: test aws access
         run: |
@@ -80,4 +78,16 @@ jobs:
       - name: trigger aws codebuild
         uses: aws-actions/aws-codebuild-run-build@v1
         with:
-          project-name: 'pj-sales-pred'
+          project-name: ${{ secrets.CODEBUILD_PROJECT }}
+          source-version: ${{ github.sha }}
+          environment-variables-override: |
+            [
+              {
+                "name": "GITHUB_SHA",
+                "value": "${{ github.sha }}"
+              },
+              {
+                "name": "LAMBDA_FUNCTION_NAME",
+                "value": "${{ env.LAMBDA_FUNCTION_NAME }}"
+              }
+            ]
