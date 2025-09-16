@@ -100,7 +100,7 @@ jobs:
           response.json
 
         cat response.json
-        echo "Lambda test completed"
+        echo " ... lambda test completed ..."
 
     - name: update lambda environment variables (if needed)
       if: github.event.inputs.branch == 'main'

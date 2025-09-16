@@ -10,15 +10,15 @@ env:
     IMAGE_REPO_NAME: ${{ secrets.IMAGE_REPO_NAME }}
     IMAGE_TAG: latest
 
-  parameter-store:
-    # any parameters in Systems Manager Parameter Store
-    # DOCKER_REGISTRY_URL: /myapp/docker/registry/url
-    # DATABASE_URL: /myapp/database/url
+  # parameter-store:
+  #   # any parameters in Systems Manager Parameter Store
+  #   # DOCKER_REGISTRY_URL: /myapp/docker/registry/url
+  #   # DATABASE_URL: /myapp/database/url
 
-  secrets-manager:
-    # any secrets in AWS Secrets Manager
-    # DB_PASSWORD: prod/myapp/db:password
-    # API_KEY: prod/myapp/api:key
+  # secrets-manager:
+  #   # any secrets in AWS Secrets Manager
+  #   # DB_PASSWORD: prod/myapp/db:password
+  #   # API_KEY: prod/myapp/api:key
 
 phases:
   pre_build:

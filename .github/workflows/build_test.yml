@@ -83,9 +83,6 @@ jobs:
           source-version-override: ${{ github.sha }}
           env-vars-for-codebuild: |
             GITHUB_SHA=${{ github.sha }},
-            GITHUB_REF=${{ github.ref }},
-            BRANCH_NAME=${{ github.ref_name }},
-            LAMBDA_FUNCTION_NAME=${{ secrets.LAMBDA_FUNCTION_NAME }},
             BUILD_TYPE=test
 
       - name: check codebuild status
