@@ -2,7 +2,6 @@ version: 0.2
 
 # env:
 #   variables:
-    # # Default environment variables
     # AWS_DEFAULT_REGION: us-east-1
     # AWS_ACCOUNT_ID: "473344230259"
     # ECR_REPOSITORY_NAME: my-app
@@ -23,24 +22,14 @@ version: 0.2
 phases:
   pre_build:
     commands:
-      # - echo "=== Pre-build Phase Started ==="
-      # - echo "AWS Account ID: $AWS_ACCOUNT_ID"
-      # - echo "AWS Region: $AWS_DEFAULT_REGION"
-      # - echo "ECR Repository: $ECR_REPOSITORY_NAME"
-      # - echo "Lambda Function: $LAMBDA_FUNCTION_NAME"
-      # - echo "GitHub SHA: $GITHUB_SHA"
-      # - echo "Build Type: $BUILD_TYPE"
-      # - echo "Branch: $BRANCH_NAME"
-
-      # login to Amazon ECR
-      - echo "Logging in to Amazon ECR..."
+      # login to ecr
+      - echo "... logging in to amazon ecr ..."
       - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
 
-      # Set up repository URI and image tags
+      # set up repository uri
       - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPOSITORY_NAME
-      # - echo "Repository URI: $REPOSITORY_URI"
 
-      # Use GitHub SHA if available, otherwise use CodeBuild commit hash
+      # use github sha or codebuild commit hash for image tag
       - |
         if [ -n "$GITHUB_SHA" ]; then
           COMMIT_HASH=$(echo $GITHUB_SHA | cut -c 1-7)
@@ -50,9 +39,8 @@ phases:
           echo "Using CodeBuild SHA: $CODEBUILD_RESOLVED_SOURCE_VERSION"
         fi
       - IMAGE_TAG=${COMMIT_HASH:-latest}
-      # - echo "Image tag: $IMAGE_TAG"
 
-      # Create ECR repository if it doesn't exist
+      # create ecr registory if not exist
       - |
         aws ecr describe-repositories --repository-names $ECR_REPOSITORY_NAME --region $AWS_DEFAULT_REGION || \
         aws ecr create-repository --repository-name $ECR_REPOSITORY_NAME --region $AWS_DEFAULT_REGION
@@ -60,62 +48,51 @@ phases:
   build:
     commands:
       - echo "=== Build Phase Started ==="
-      - echo "Building the Docker image..."
-
-      # Build Docker image
+      # build docker image
+      - echo "... building the docker image..."
       - docker build -t $ECR_REPOSITORY_NAME:$IMAGE_TAG .
       - docker tag $ECR_REPOSITORY_NAME:$IMAGE_TAG $REPOSITORY_URI:$IMAGE_TAG
       - docker tag $ECR_REPOSITORY_NAME:$IMAGE_TAG $REPOSITORY_URI:latest
 
-      # Show image details
+      # show image details
       - echo "Docker images built:"
       - docker images | grep $ECR_REPOSITORY_NAME
 
   post_build:
     commands:
       - echo "=== Post-build Phase Started ==="
-      - echo "Build completed on $(date)"
+      - echo "... build completed on $(date) ..."
 
-      # Push images to ECR
+      # push images to ecr
       - echo "Pushing Docker images to ECR..."
       - docker push $REPOSITORY_URI:$IMAGE_TAG
       - docker push $REPOSITORY_URI:latest
       - echo "Images pushed successfully"
 
-      # Update Lambda function (only for deploy builds)
+      # update lambda function (only for deploy builds)
       - |
         if [ "$BUILD_TYPE" = "deploy" ]; then
-          echo "updating Lambda function: $LAMBDA_FUNCTION_NAME"
+          echo "... updating lambda function ..."
           aws lambda update-function-code \
             --function-name $LAMBDA_FUNCTION_NAME \
             --image-uri $REPOSITORY_URI:$IMAGE_TAG \
             --region $AWS_DEFAULT_REGION
 
-          # Wait for update to complete
-          echo "Waiting for Lambda update to complete..."
+          echo "... waiting for Lambda update to complete ..."
           aws lambda wait function-updated \
             --function-name $LAMBDA_FUNCTION_NAME \
             --region $AWS_DEFAULT_REGION
 
-          # Verify the update
           UPDATED_IMAGE=$(aws lambda get-function \
             --function-name $LAMBDA_FUNCTION_NAME \
             --region $AWS_DEFAULT_REGION \
             --query 'Code.ImageUri' --output text)
 
-
         elif [ "$BUILD_TYPE" = "test" ]; then
-          echo "Test build completed - skipping Lambda deployment"
+          echo "... test build completed - skipping lambda deployment ..."
         else
-          echo "Build type not specified - skipping Lambda deployment"
+          echo "... build type not specified - skipping lambda deployment"
         fi
-
-      # # Output build information
-      # - echo "=== Build Summary ==="
-      # - echo "Image Tag: $IMAGE_TAG"
-      # - echo "Build Type: $BUILD_TYPE"
-      # - echo "GitHub SHA: $GITHUB_SHA"
-      # - echo "Branch: $BRANCH_NAME"
 
 artifacts:
   files:
@@ -126,99 +103,3 @@ cache:
   paths:
     - '/root/.cache/pip/**/*'
     - 'node_modules/**/*'
-
-
-# version: 0.2
-
-# env:
-#   variables:
-#     ECR_REPOSITORY_NAME: "my-app"
-#     LAMBDA_FUNCTION_NAME: "my-app"
-
-# phases:
-#   pre_build:
-#     commands:
-#       - echo logging in to amazon ecr...
-
-#       # get the aws account id and region from the environment
-#       - AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-#       - AWS_DEFAULT_REGION=$(aws configure get region)
-
-#       # define the name and tag for the ecr repository
-#       - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPOSITORY_NAME
-#       - TAG=${CODEBUILD_RESOLVED_SOURCE_VERSION:-latest}
-
-#       - echo repository uri is... $REPOSITORY_URI
-#       - echo tag is... $TAG
-#       - echo lambda function is... $LAMBDA_FUNCTION_NAME
-
-#       # login to ecr
-#       - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $REPOSITORY_URI
-
-#   build:
-#     commands:
-#       # build docker image from the dockerfile
-#       - echo build started on `date`
-#       - echo building the docker image for lambda...
-
-#       - docker build -t $REPOSITORY_URI:latest -f Dockerfile.lambda .
-#       - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$TAG
-
-#       # test the container image
-#       - echo testing the container locally...
-#       - docker run --rm -p 9000:8080 $REPOSITORY_URI:latest &
-#       - sleep 5
-#       - echo container test completed
-
-
-#   post_build:
-#     commands:
-#       # push the docker image to the ecr
-#       - echo build completed on `date`
-#       - echo pushing the docker images...
-#       - docker push $REPOSITORY_URI:latest
-#       - docker push $REPOSITORY_URI:$TAG
-
-#       # update lambda
-#       - echo updating lambda function...
-#       - |
-#         aws lambda update-function-code \
-#           --function-name $LAMBDA_FUNCTION_NAME \
-#           --image-uri $REPOSITORY_URI:$TAG \
-#           --region $AWS_DEFAULT_REGION
-#       - echo waiting for lambda function to be updated...
-#       - |
-#         aws lambda wait function-updated \
-#           --function-name $LAMBDA_FUNCTION_NAME \
-#           --region $AWS_DEFAULT_REGION
-#       - echo lambda function updated successfully
-#       - echo getting updated function info...
-#       - |
-#         aws lambda get-function \
-#           --function-name $LAMBDA_FUNCTION_NAME \
-#           --region $AWS_DEFAULT_REGION \
-#           --query 'Code.ImageUri' \
-#           --output text
-
-#       # check the scan status
-#       - echo ... waiting for inspector scan to complete ...
-#       - |
-#         SCAN_STATUS=$(aws ecr describe-image-scan-findings --repository-name your-repo-name --image-id imageTag=latest --query 'imageScanStatus.status' --output text)
-#         while [ "$SCAN_STATUS" != "COMPLETE" ]; do
-#           echo scan status: $SCAN_STATUS. retrying in 15 seconds...
-#           sleep 15
-#           SCAN_STATUS=$(aws ecr describe-image-scan-findings --repository-name your-repo-name --image-id imageTag=latest --query 'imageScanStatus.status' --output text)
-#         done
-#       - |
-#         VULNERABILITIES=$(aws ecr describe-image-scan-findings --repository-name your-repo-name --image-id imageTag=latest --query 'imageScanFindings.findingSeverityCounts' --output json)
-#         CRITICAL_COUNT=$(echo $VULNERABILITIES | jq -r '."CRITICAL" // 0')
-#         if [ "$CRITICAL_COUNT" -gt "0" ]; then
-#           echo critical vulnerabilities found! failing the build.
-#           exit 1
-#         else
-#           echo no critical vulnerabilities found. build successful.
-#         fi
-
-# artifacts:
-#   files:
-#     - '**/*'
