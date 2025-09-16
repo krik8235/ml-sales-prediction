@@ -112,7 +112,6 @@ phases:
 
       # Output build information
       - echo "=== Build Summary ==="
-      - echo "Repository URI: $REPOSITORY_URI"
       - echo "Image Tag: $IMAGE_TAG"
       - echo "Build Type: $BUILD_TYPE"
       - echo "GitHub SHA: $GITHUB_SHA"
