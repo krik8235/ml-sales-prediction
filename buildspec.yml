@@ -24,7 +24,6 @@ phases:
   pre_build:
     commands:
       - echo "=== Pre-build Phase Started ==="
-      - echo "Build started on $(date)"
       - echo "AWS Account ID: $AWS_ACCOUNT_ID"
       - echo "AWS Region: $AWS_DEFAULT_REGION"
       - echo "ECR Repository: $ECR_REPOSITORY_NAME"
