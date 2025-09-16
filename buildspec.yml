@@ -38,7 +38,7 @@ phases:
 
       # Set up repository URI and image tags
       - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPOSITORY_NAME
-      - echo "Repository URI: $REPOSITORY_URI"
+      # - echo "Repository URI: $REPOSITORY_URI"
 
       # Use GitHub SHA if available, otherwise use CodeBuild commit hash
       - |
@@ -50,7 +50,7 @@ phases:
           echo "Using CodeBuild SHA: $CODEBUILD_RESOLVED_SOURCE_VERSION"
         fi
       - IMAGE_TAG=${COMMIT_HASH:-latest}
-      - echo "Image tag: $IMAGE_TAG"
+      # - echo "Image tag: $IMAGE_TAG"
 
       # Create ECR repository if it doesn't exist
       - |
@@ -102,7 +102,7 @@ phases:
             --function-name $LAMBDA_FUNCTION_NAME \
             --region $AWS_DEFAULT_REGION \
             --query 'Code.ImageUri' --output text)
-          echo "Lambda updated with image: $UPDATED_IMAGE"
+
 
         elif [ "$BUILD_TYPE" = "test" ]; then
           echo "Test build completed - skipping Lambda deployment"
