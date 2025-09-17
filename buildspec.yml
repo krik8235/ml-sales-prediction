@@ -32,7 +32,7 @@ phases:
       - cat /tmp/ecr_password | docker login --username AWS --password-stdin $ECR_REGISTRY
       - echo "ECR login successful!"
       - rm /tmp/ecr_password
-      - REPOSITORY_URI="$ECR_REGISTRY/my-app"
+      - REPOSITORY_URI="$ECR_REGISTRY/$ECR_REPOSITORY_NAME"
 
       # # set up repository uri
       # - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPOSITORY_NAME
@@ -57,13 +57,13 @@ phases:
     commands:
       - echo "=== Build Phase Started ==="
       # build docker image
-      - echo "... building the docker image..."
-      - docker build -t $ECR_REPOSITORY_NAME:$IMAGE_TAG .
+      - echo "... building the docker image ..."
+      - docker build -t my-app -f Dockerfile.lambda .
+
       - docker tag $ECR_REPOSITORY_NAME:$IMAGE_TAG $REPOSITORY_URI:$IMAGE_TAG
-      - docker tag $ECR_REPOSITORY_NAME:$IMAGE_TAG $REPOSITORY_URI:latest
 
       # show image details
-      - echo "Docker images built:"
+      - echo "... docker images built:"
       - docker images | grep $ECR_REPOSITORY_NAME
 
   post_build:
@@ -74,7 +74,6 @@ phases:
       # push images to ecr
       - echo "Pushing Docker images to ECR..."
       - docker push $REPOSITORY_URI:$IMAGE_TAG
-      - docker push $REPOSITORY_URI:latest
       - echo "Images pushed successfully"
 
       # update lambda function (only for deploy builds)
