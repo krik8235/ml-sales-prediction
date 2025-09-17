@@ -60,7 +60,7 @@ phases:
       - echo "... building the docker image ..."
       - docker build -t my-app -f Dockerfile.lambda .
 
-      - docker tag $ECR_REPOSITORY_NAME:$IMAGE_TAG $REPOSITORY_URI:$IMAGE_TAG
+      - docker tag $ECR_REPOSITORY_NAME:latest $REPOSITORY_URI:$IMAGE_TAG
 
       # show image details
       - echo "... docker images built:"
@@ -72,7 +72,7 @@ phases:
       - echo "... build completed on $(date) ..."
 
       # push images to ecr
-      - echo "Pushing Docker images to ECR..."
+      - echo "... pushing docker images to ecr ..."
       - docker push ${REPOSITORY_URI}:${IMAGE_TAG}
       - echo "Images pushed successfully"
 
