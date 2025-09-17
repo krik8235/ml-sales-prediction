@@ -23,26 +23,19 @@ phases:
   pre_build:
     commands:
       # login to ecr
-      - echo "=== Debug ECR Login Issue ==="
-      - echo "Checking AWS credentials..."
-      - aws sts get-caller-identity
-      - echo "Checking Docker version..."
-      - docker --version
-      - echo "Testing ECR get-login-password separately..."
+      - echo "=== Using CodeBuild Built-in Variables ==="
+      - AWS_ACCOUNT_ID=$(echo $CODEBUILD_BUILD_ARN | cut -d':' -f5)
+      - ECR_REGISTRY="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com"
+      - echo "Getting ECR login password..."
       - aws ecr get-login-password --region $AWS_DEFAULT_REGION > /tmp/ecr_password
-      - echo "ECR password retrieved successfully"
-      - echo "Password length:"
-      - wc -c /tmp/ecr_password
-      - echo "Testing Docker login with ECR..."
-      - cat /tmp/ecr_password | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      - echo "Logging in to ECR..."
+      - cat /tmp/ecr_password | docker login --username AWS --password-stdin $ECR_REGISTRY
       - echo "ECR login successful!"
       - rm /tmp/ecr_password
+      - REPOSITORY_URI="$ECR_REGISTRY/my-app"
 
-      - echo "... logging in to amazon ecr ..."
-      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
-
-      # set up repository uri
-      - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPOSITORY_NAME
+      # # set up repository uri
+      # - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPOSITORY_NAME
 
       # use github sha or codebuild commit hash for image tag
       - |
