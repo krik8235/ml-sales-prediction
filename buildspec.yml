@@ -1,13 +1,13 @@
 version: 0.2
 
-# env:
-#   variables:
-    # AWS_DEFAULT_REGION: us-east-1
-    # AWS_ACCOUNT_ID: "473344230259"
-    # ECR_REPOSITORY_NAME: my-app
-    # LAMBDA_FUNCTION_NAME: my-app
-    # IMAGE_REPO_NAME: my-app
-    # IMAGE_TAG: latest
+env:
+  variables:
+    AWS_DEFAULT_REGION: us-east-1
+    AWS_ACCOUNT_ID: "473344230259"
+    ECR_REPOSITORY_NAME: my-app
+    LAMBDA_FUNCTION_NAME: my-app
+    IMAGE_REPO_NAME: my-app
+    IMAGE_TAG: latest
 
   # parameter-store:
   #   # any parameters in Systems Manager Parameter Store
