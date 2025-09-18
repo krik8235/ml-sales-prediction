@@ -73,20 +73,6 @@ jobs:
           aws sts get-caller-identity
           echo "✅ oidc authentication successful"
 
-
-      # genereate and store image tag
-      - name: generate image tag
-        run: |
-          if [ -n "${{ github.sha }}" ]; then
-            COMMIT_HASH=$(echo ${{ github.sha }} | cut -c 1-7)
-            echo "Using GitHub SHA: ${{ github.sha }}"
-          else
-            COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
-            echo "Using CodeBuild SHA: $CODEBUILD_RESOLVED_SOURCE_VERSION"
-          fi
-          echo "IMAGE_TAG=${COMMIT_HASH:-latest} >> $GITHUB_OUTPUT
-
-
       # trigger aws codebuild to start the project named  ${{ secrets.CODEBUILD_PROJECT }}
       - name: trigger aws codebuild
         uses: aws-actions/aws-codebuild-run-build@v1
@@ -96,8 +82,7 @@ jobs:
           source-version-override: ${{ github.sha }}
           env-vars-for-codebuild: | # pass the env vars to buildspec.yml. set BUILD_TYPE as test not to trigger the deployment
             GITHUB_SHA=${{ github.sha }},
-            BUILD_TYPE=test,
-            IMAGE_TAG=IMAGE_TAG
+            BUILD_TYPE=test
 
       - name: check codebuild status
         if: always()

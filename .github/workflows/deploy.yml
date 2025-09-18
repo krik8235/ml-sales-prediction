@@ -52,7 +52,15 @@ jobs:
       run: |
         aws lambda get-function --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} --region ${{ secrets.AWS_REGION_NAME }}
 
-    # find the image url and digest for the latest image tagged
+    # retrieve image tag from aws param store
+    - name: retrieve image tag from aws param store
+      id: get_tag
+      run: |
+        IMAGE_TAG=$(aws ssm get-parameter --name "/my-app/image-tag" --query "Parameter.Value" --output text)
+        echo "... retrieved IMAGE_TAG: $IMAGE_TAG"
+        echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+
     - name: get ecr uri and image digest
       id: get_image
       run: |
@@ -65,7 +73,7 @@ jobs:
 
     - name: update lambda function with new image
       run: |
-        if [[ env.image_uri_with_digest ]]; then
+        if [[ IMAGE_DIGEST ]]; then
           aws lambda update-function-code \
             --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
             --region ${{ secrets.AWS_REGION_NAME }} \
@@ -75,7 +83,7 @@ jobs:
         fi
 
     - name: start codebuild for container build
-      if: ${{ !env.image_uri_with_digest }}
+      if: ${{ !IMAGE_DIGEST }}
       uses: aws-actions/aws-codebuild-run-build@v1
       id: codebuild
       with:
@@ -102,7 +110,7 @@ jobs:
           ]
 
     - name: update lambda function with new image
-      if: ${{ !env.image_uri_with_digest }}
+      if: ${{ !IMAGE_DIGEST }}
       run: |
         aws lambda update-function-code \
           --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \

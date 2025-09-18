@@ -31,16 +31,23 @@ phases:
       - rm /tmp/ecr_password
       - REPOSITORY_URI="$ECR_REGISTRY/$ECR_REPOSITORY_NAME"
 
-      # # use github sha or codebuild commit hash for image tag
-      # - |
-      #   if [ -n "$GITHUB_SHA" ]; then
-      #     COMMIT_HASH=$(echo $GITHUB_SHA | cut -c 1-7)
-      #     echo "Using GitHub SHA: $GITHUB_SHA"
-      #   else
-      #     COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
-      #     echo "Using CodeBuild SHA: $CODEBUILD_RESOLVED_SOURCE_VERSION"
-      #   fi
-      # - IMAGE_TAG=${COMMIT_HASH:-latest}
+      # use github sha or codebuild commit hash for image tag
+      - |
+        if [ -n "$GITHUB_SHA" ]; then
+          COMMIT_HASH=$(echo $GITHUB_SHA | cut -c 1-7)
+          echo "Using GitHub SHA: $GITHUB_SHA"
+        else
+          COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+          echo "Using CodeBuild SHA: $CODEBUILD_RESOLVED_SOURCE_VERSION"
+        fi
+      - IMAGE_TAG=${COMMIT_HASH:-latest}
+
+      # store image tag in aws system manager param store (retrieve it in the deploy phase)
+      - aws ssm put-parameter \
+        --name "/my-app/image-tag" \
+        --value "$IMAGE_TAG" \
+        --type "String" \
+        --overwrite
 
       # create ecr registory if not exist
       - |
