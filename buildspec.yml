@@ -7,15 +7,12 @@ env:
     ECR_REPOSITORY_NAME: my-app
     LAMBDA_FUNCTION_NAME: my-app
     IMAGE_REPO_NAME: my-app
-    IMAGE_TAG: latest
 
   # parameter-store:
-  #   # any parameters in Systems Manager Parameter Store
   #   # DOCKER_REGISTRY_URL: /myapp/docker/registry/url
   #   # DATABASE_URL: /myapp/database/url
 
   # secrets-manager:
-  #   # any secrets in AWS Secrets Manager
   #   # DB_PASSWORD: prod/myapp/db:password
   #   # API_KEY: prod/myapp/api:key
 
@@ -23,19 +20,16 @@ phases:
   pre_build:
     commands:
       # login to ecr
-      - echo "=== Using CodeBuild Built-in Variables ==="
+      - echo "=== Pre-build Phase Started ==="
       - AWS_ACCOUNT_ID=$(echo $CODEBUILD_BUILD_ARN | cut -d':' -f5)
       - ECR_REGISTRY="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com"
-      - echo "Getting ECR login password..."
+      - echo "... getting ecr login password..."
       - aws ecr get-login-password --region $AWS_DEFAULT_REGION > /tmp/ecr_password
-      - echo "Logging in to ECR..."
+      - echo "... logging in to ECR ..."
       - cat /tmp/ecr_password | docker login --username AWS --password-stdin $ECR_REGISTRY
-      - echo "ECR login successful!"
+      - echo "... ecr login successful ..."
       - rm /tmp/ecr_password
       - REPOSITORY_URI="$ECR_REGISTRY/$ECR_REPOSITORY_NAME"
-
-      # # set up repository uri
-      # - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPOSITORY_NAME
 
       # use github sha or codebuild commit hash for image tag
       - |

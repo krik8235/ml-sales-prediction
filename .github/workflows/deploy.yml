@@ -14,6 +14,7 @@ on:
 
 env:
   BRANCH_NAME: "main"
+  GITHUB_SHA: ${{ github.sha }}
 
 jobs:
   build-and-deploy:
@@ -51,31 +52,57 @@ jobs:
       run: |
         aws lambda get-function --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} --region ${{ secrets.AWS_REGION_NAME }}
 
-    - name: start codebuild for container build
-      uses: aws-actions/aws-codebuild-run-build@v1
-      id: codebuild
-      with:
-        project-name: ${{ secrets.CODEBUILD_PROJECT }}
-        source-version-override: ${{ github.event.inputs.branch }}
-        env-vars-for-codebuild: |
-          [
-            {
-              "name": "GITHUB_REF",
-              "value": "refs/heads/${{ github.event.inputs.branch }}"
-            },
-            {
-              "name": "BRANCH_NAME",
-              "value": "${{ env.BRANCH_NAME }}"
-            },
-            {
-              "name": "ECR_REPOSITORY_NAME",
-              "value": "${{ secrets.ECR_REPOSITORY }}"
-            },
-            {
-              "name": "LAMBDA_FUNCTION_NAME",
-              "value": "${{ secrets.LAMBDA_FUNCTION_NAME }}"
-            }
-          ]
+    # find the image url and digest for the latest image tagged
+    - name: get ecr uri and image digest
+      id: get_image
+      run: |
+        ECR_URI=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION_NAME }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:${{ env.GITHUB_SHA }}
+        IMAGE_DIGEST=$(aws ecr list-images --repository-name ${{ secrets.ECR_REPOSITORY }} --filter "tagStatus=TAGGED" --query "imageIds[?imageTag=='${{ env.GITHUB_SHA }}'].imageDigest" --output text --region ${{ secrets.AWS_REGION_NAME }})
+
+        echo "ECR_URI=$ECR_URI"
+        echo "IMAGE_DIGEST=$IMAGE_DIGEST"
+        echo "image_uri_with_digest=$ECR_URI@$IMAGE_DIGEST" >> $GITHUB_OUTPUT
+
+    - name: update lambda function with new image
+      run: |
+        aws lambda update-function-code \
+          --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
+          --region ${{ secrets.AWS_REGION_NAME }} \
+          --image-uri ${{ env.image_uri_with_digest }}
+
+    # # if the image cannot be found, create new one
+    # - name: start codebuild for container build
+    #   uses: aws-actions/aws-codebuild-run-build@v1
+    #   id: codebuild
+    #   with:
+    #     project-name: ${{ secrets.CODEBUILD_PROJECT }}
+    #     source-version-override: ${{ github.event.inputs.branch }}
+    #     env-vars-for-codebuild: |
+    #       [
+    #         {
+    #           "name": "GITHUB_REF",
+    #           "value": "refs/heads/${{ github.event.inputs.branch }}"
+    #         },
+    #         {
+    #           "name": "BRANCH_NAME",
+    #           "value": "${{ env.BRANCH_NAME }}"
+    #         },
+    #         {
+    #           "name": "ECR_REPOSITORY_NAME",
+    #           "value": "${{ secrets.ECR_REPOSITORY }}"
+    #         },
+    #         {
+    #           "name": "LAMBDA_FUNCTION_NAME",
+    #           "value": "${{ secrets.LAMBDA_FUNCTION_NAME }}"
+    #         }
+    #       ]
+
+    # - name: update lambda function with new image
+    #   run: |
+    #     aws lambda update-function-code \
+    #       --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
+    #       --region ${{ secrets.AWS_REGION_NAME }} \
+    #       --image-uri ${{ steps.get_image.outputs.image_uri_with_digest }}
 
     - name: verify lambda updates
       run: |
