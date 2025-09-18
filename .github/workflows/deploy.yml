@@ -68,12 +68,12 @@ jobs:
         IMAGE_DIGEST=$(aws ecr list-images --repository-name ${{ secrets.ECR_REPOSITORY }} --filter "tagStatus=TAGGED" --query "imageIds[?imageTag=='${{ env.IMAGE_TAG }}'].imageDigest" --output text --region ${{ secrets.AWS_REGION_NAME }})
 
         echo "ECR_URI=$ECR_URI"
-        echo "IMAGE_DIGEST=$IMAGE_DIGEST"
+        echo "IMAGE_DIGEST=$IMAGE_DIGEST" >> $GITHUB_OUTPUT
         echo "image_uri_with_digest=$ECR_URI@$IMAGE_DIGEST" >> $GITHUB_OUTPUT
 
     - name: update lambda function with new image
       run: |
-        if [[ IMAGE_DIGEST ]]; then
+        if [[ "${{ steps.get_image.outputs.IMAGE_DIGEST }}" ]]; then
           aws lambda update-function-code \
             --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
             --region ${{ secrets.AWS_REGION_NAME }} \
@@ -83,7 +83,7 @@ jobs:
         fi
 
     - name: start codebuild for container build
-      if: ${{ !IMAGE_DIGEST }}
+      if: ${{ !steps.get_image.outputs.IMAGE_DIGEST }}
       uses: aws-actions/aws-codebuild-run-build@v1
       id: codebuild
       with:
@@ -110,7 +110,7 @@ jobs:
           ]
 
     - name: update lambda function with new image
-      if: ${{ !IMAGE_DIGEST }}
+      if: ${{ !steps.get_image.outputs.IMAGE_DIGEST }}
       run: |
         aws lambda update-function-code \
           --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
