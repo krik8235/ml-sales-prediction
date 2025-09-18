@@ -70,7 +70,6 @@ jobs:
 
       - name: test aws access
         run: |
-          echo "... testing aws authentication ..."
           aws sts get-caller-identity
           echo "✅ oidc authentication successful"
 
@@ -95,7 +94,6 @@ jobs:
             --query 'builds[0].buildStatus' --output text)
           echo "build status: $BUILD_STATUS"
 
-          echo "=== Build Phases ==="
           aws codebuild batch-get-builds --ids "$BUILD_ID" \
             --query 'builds[0].phases[].{Phase:phaseType,Status:phaseStatus,Duration:durationInSeconds}' \
             --output table
@@ -107,7 +105,7 @@ jobs:
             echo "✅ codebuild completed successfully"
           fi
 
-      - name: upload build artifacts (Optional)
+      - name: upload build artifacts (optional)
         if: always()
         run: |
           echo "build completed for commit: ${{ github.sha }}"
