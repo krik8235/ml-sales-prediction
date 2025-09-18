@@ -56,8 +56,8 @@ jobs:
       id: codebuild
       with:
         project-name: ${{ secrets.CODEBUILD_PROJECT }}
-        source-version: ${{ github.event.inputs.branch }}
-        environment-variables-override: |
+        source-version-override: ${{ github.event.inputs.branch }}
+        env-vars-for-codebuild: |
           [
             {
               "name": "GITHUB_REF",
