@@ -43,11 +43,9 @@ phases:
       - IMAGE_TAG="${COMMIT_HASH:-latest}"
 
       # store image tag in aws system manager param store (retrieve it in the deploy phase)
-      - aws ssm put-parameter \
-        --name "/my-app/image-tag" \
-        --value "$IMAGE_TAG" \
-        --type "String" \
-        --overwrite
+      - |
+        aws ssm put-parameter --name "/my-app/image-tag" --value "$IMAGE_TAG" --type "String" --overwrite
+
 
       # create ecr registory if not exist
       - |
