@@ -166,7 +166,7 @@ jobs:
 
         echo "... waiting for function to be ready for configuration update ..."
 
-        MAX_ATTEMPTS=10
+        MAX_ATTEMPTS=30
         ATTEMPT=1
 
         while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
@@ -191,8 +191,8 @@ jobs:
             echo "❌ function update failed"
             exit 1
           else
-            echo "function not ready yet, waiting 10 seconds..."
-            sleep 10
+            echo "function not ready yet, waiting 30 seconds..."
+            sleep 30
             ATTEMPT=$((ATTEMPT + 1))
           fi
         done
