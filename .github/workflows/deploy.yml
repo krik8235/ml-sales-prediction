@@ -157,14 +157,16 @@ jobs:
     - name: update lambda environment variables (if needed)
       if: github.event.inputs.branch == 'main'
       run: |
+        DEPLOY_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+
         aws lambda update-function-configuration \
           --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
           --region ${{ secrets.AWS_REGION_NAME }} \
-          --environment "Variables='{
+          --environment "Variables={
             \"ENVIRONMENT\": \"production\",
             \"VERSION\": \"${{ github.sha }}\",
-            \"DEPLOY_TIME\": \"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'\"
-          }'"
+            \"DEPLOY_TIME\": \"$DEPLOY_TIME\"
+          }"
 
     - name: cleanup
       if: always()
