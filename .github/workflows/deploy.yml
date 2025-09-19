@@ -173,14 +173,14 @@ jobs:
           echo "... attempt $ATTEMPT/$MAX_ATTEMPTS: checking function state ..."
 
           FUNCTION_STATE=$(aws lambda get-function \
-            --function-name "$FUNCTION_NAME" \
-            --region "$AWS_REGION" \
+            --function-name "${{ secrets.LAMBDA_FUNCTION_NAME }}" \
+            --region "${{ secrets.AWS_REGION_NAME }}" \
             --query 'Configuration.State' \
             --output text)
 
           LAST_UPDATE_STATUS=$(aws lambda get-function \
-            --function-name "$FUNCTION_NAME" \
-            --region "$AWS_REGION" \
+            --function-name "${{ secrets.LAMBDA_FUNCTION_NAME }}"" \
+            --region "${{ secrets.AWS_REGION_NAME }}" \
             --query 'Configuration.LastUpdateStatus' \
             --output text)
 
