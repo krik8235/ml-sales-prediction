@@ -128,7 +128,7 @@ jobs:
           --query 'Code.ImageUri' \
           --output text)
 
-        if [[ $CURRENT_IMAGE == *"${{ github.event.inputs.branch }}"* ]]; then
+        if [[ $CURRENT_IMAGE == *"${{ env.IMAGE_TAG }}"* ]]; then
           echo "✅ lambda function successfully updated with new image"
         else
           echo "❌ lambda function update may have failed"
@@ -164,4 +164,4 @@ jobs:
       run: |
         echo "=== Cleanup ==="
         rm -f response.json
-        echo "✅ Cleanup completed"
+        echo "✅ cleanup completed"
