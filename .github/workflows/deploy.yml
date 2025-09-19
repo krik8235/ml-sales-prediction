@@ -164,7 +164,7 @@ jobs:
         echo "VERSION: $IMAGE_TAG"
         echo "DEPLOY_TIME: $DEPLOY_TIME"
 
-        echo "Waiting for function to be ready for configuration update..."
+        echo "... waiting for function to be ready for configuration update ..."
 
         MAX_ATTEMPTS=10
         ATTEMPT=1
@@ -173,14 +173,14 @@ jobs:
           echo "... attempt $ATTEMPT/$MAX_ATTEMPTS: checking function state ..."
 
           FUNCTION_STATE=$(aws lambda get-function \
-            --function-name "${{ secrets.LAMBDA_FUNCTION_NAME }}" \
-            --region "${{ secrets.AWS_REGION_NAME }}" \
+            --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
+            --region ${{ secrets.AWS_REGION_NAME }} \
             --query 'Configuration.State' \
             --output text)
 
           LAST_UPDATE_STATUS=$(aws lambda get-function \
-            --function-name "${{ secrets.LAMBDA_FUNCTION_NAME }}"" \
-            --region "${{ secrets.AWS_REGION_NAME }}" \
+            --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
+            --region ${{ secrets.AWS_REGION_NAME }} \
             --query 'Configuration.LastUpdateStatus' \
             --output text)
 
