@@ -21,7 +21,7 @@ permissions:
   contents: read
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -58,64 +58,67 @@ jobs:
       run: |
         IMAGE_TAG=$(aws ssm get-parameter --name "/my-app/image-tag" --query "Parameter.Value" --output text)
         echo "... retrieved IMAGE_TAG: $IMAGE_TAG"
-        echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_OUTPUT
+        echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
-
-    - name: get ecr uri and image digest
+    # construct image url with image tag
+    - name: construct image uri
       id: get_image
       run: |
-        ECR_URI=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION_NAME }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
-        IMAGE_DIGEST=$(aws ecr list-images --repository-name ${{ secrets.ECR_REPOSITORY }} --filter "tagStatus=TAGGED" --query "imageIds[?imageTag=='${{ env.IMAGE_TAG }}'].imageDigest" --output text --region ${{ secrets.AWS_REGION_NAME }})
+        ECR_URI=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION_NAME }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}
+        IMAGE_URI_WITH_TAG="${ECR_URI}:${{ env.IMAGE_TAG }}"
 
         echo "ECR_URI=$ECR_URI"
-        echo "IMAGE_DIGEST=$IMAGE_DIGEST" >> $GITHUB_OUTPUT
-        echo "image_uri_with_digest=$ECR_URI@$IMAGE_DIGEST" >> $GITHUB_OUTPUT
+        echo "IMAGE_URI_WITH_TAG=$IMAGE_URI_WITH_TAG" >> $GITHUB_ENV
 
-    - name: update lambda function with new image
+    # update the lambda function
+    - name: update lambda function with the image retrieved
       run: |
-        if [[ "${{ steps.get_image.outputs.IMAGE_DIGEST }}" ]]; then
+        if [[ "${{ env.IMAGE_TAG }}" ]]; then
           aws lambda update-function-code \
             --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
             --region ${{ secrets.AWS_REGION_NAME }} \
-            --image-uri ${{ env.image_uri_with_digest }}
+            --image-uri ${{ env.IMAGE_URI_WITH_TAG }}
         else
           echo "... couldn't find existing image. create a new one ..."
         fi
 
-    - name: start codebuild for container build
-      if: ${{ !steps.get_image.outputs.IMAGE_DIGEST }}
-      uses: aws-actions/aws-codebuild-run-build@v1
-      id: codebuild
-      with:
-        project-name: ${{ secrets.CODEBUILD_PROJECT }}
-        source-version-override: ${{ github.event.inputs.branch }}
-        env-vars-for-codebuild: |
-          [
-            {
-              "name": "GITHUB_REF",
-              "value": "refs/heads/${{ github.event.inputs.branch }}"
-            },
-            {
-              "name": "BRANCH_NAME",
-              "value": "${{ env.BRANCH_NAME }}"
-            },
-            {
-              "name": "ECR_REPOSITORY_NAME",
-              "value": "${{ secrets.ECR_REPOSITORY }}"
-            },
-            {
-              "name": "LAMBDA_FUNCTION_NAME",
-              "value": "${{ secrets.LAMBDA_FUNCTION_NAME }}"
-            }
-          ]
+    # # when no image tags are found, build one from scratch
+    # - name: start codebuild for container build
+    #   if: ${{ !env.IMAGE_TAG }}
+    #   uses: aws-actions/aws-codebuild-run-build@v1
+    #   id: codebuild
+    #   with:
+    #     project-name: ${{ secrets.CODEBUILD_PROJECT }}
+    #     source-version-override: ${{ github.event.inputs.branch }}
+    #     env-vars-for-codebuild: |
+    #       [
+    #         {
+    #           "name": "GITHUB_REF",
+    #           "value": "refs/heads/${{ github.event.inputs.branch }}"
+    #         },
+    #         {
+    #           "name": "BRANCH_NAME",
+    #           "value": "${{ env.BRANCH_NAME }}"
+    #         },
+    #         {
+    #           "name": "ECR_REPOSITORY_NAME",
+    #           "value": "${{ secrets.ECR_REPOSITORY }}"
+    #         },
+    #         {
+    #           "name": "LAMBDA_FUNCTION_NAME",
+    #           "value": "${{ secrets.LAMBDA_FUNCTION_NAME }}"
+    #         }
+    #       ]
 
-    - name: update lambda function with new image
-      if: ${{ !steps.get_image.outputs.IMAGE_DIGEST }}
-      run: |
-        aws lambda update-function-code \
-          --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
-          --region ${{ secrets.AWS_REGION_NAME }} \
-          --image-uri ${{ steps.get_image.outputs.image_uri_with_digest }}
+    # # update the lambda function with the new image created
+    # - name: update lambda function with a new image
+    #   if: ${{ !env.IMAGE_TAG }}
+    #   run: |
+    #     aws lambda update-function-code \
+    #       --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
+    #       --region ${{ secrets.AWS_REGION_NAME }} \
+    #       --image-uri "$IMAGE_URI_WITH_TAG"
+
 
     - name: verify lambda updates
       run: |
@@ -155,3 +158,10 @@ jobs:
             "VERSION": "${{ github.sha }}",
             "DEPLOY_TIME": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
           }'
+
+    - name: cleanup
+      if: always()
+      run: |
+        echo "=== Cleanup ==="
+        rm -f response.json
+        echo "✅ Cleanup completed"
