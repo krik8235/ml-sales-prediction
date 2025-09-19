@@ -52,73 +52,80 @@ jobs:
       run: |
         aws lambda get-function --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} --region ${{ secrets.AWS_REGION_NAME }}
 
-    # retrieve image tag from aws param store
-    - name: retrieve image tag from aws param store
-      id: get_tag
+    - name: retrieve image tag and validate image
+      id: validate_image
       run: |
-        IMAGE_TAG=$(aws ssm get-parameter --name "/my-app/image-tag" --query "Parameter.Value" --output text)
-        echo "... retrieved IMAGE_TAG: $IMAGE_TAG"
+        IMAGE_TAG=$(aws ssm get-parameter --name "/my-app/image-tag" --query "Parameter.Value" --output text || echo "")
         echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
-    # construct image url with image tag
-    - name: construct image uri
-      id: get_image
-      run: |
-        ECR_URI=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION_NAME }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}
-        IMAGE_URI_WITH_TAG="${ECR_URI}:${{ env.IMAGE_TAG }}"
-
-        echo "ECR_URI=$ECR_URI"
-        echo "IMAGE_URI_WITH_TAG=$IMAGE_URI_WITH_TAG" >> $GITHUB_ENV
-
-    # update the lambda function
-    - name: update lambda function with the image retrieved
-      run: |
-        if [[ "${{ env.IMAGE_TAG }}" ]]; then
-          aws lambda update-function-code \
-            --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
-            --region ${{ secrets.AWS_REGION_NAME }} \
-            --image-uri ${{ env.IMAGE_URI_WITH_TAG }}
+        if [[ -z "$IMAGE_TAG" ]]; then
+          echo "... no image tag found in SSM. will create a new image"
+          echo "has_image=false" >> $GITHUB_OUTPUT
         else
-          echo "... couldn't find existing image. create a new one ..."
+          echo "... checking for image with tag: $IMAGE_TAG"
+          IMAGE_URI=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION_NAME }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:${IMAGE_TAG}
+
+          if aws ecr describe-images --repository-name ${{ secrets.ECR_REPOSITORY }} --image-ids imageTag=$IMAGE_TAG --region ${{ secrets.AWS_REGION_NAME }} > /dev/null 2>&1; then
+            echo "... image found in ecr. will update lambda ..."
+            echo "has_image=true" >> $GITHUB_OUTPUT
+            echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_OUTPUT
+          else
+            echo "... image not found in ecr. will create a new image ..."
+            echo "has_image=false" >> $GITHUB_OUTPUT
+          fi
         fi
 
-    # # when no image tags are found, build one from scratch
-    # - name: start codebuild for container build
-    #   if: ${{ !env.IMAGE_TAG }}
-    #   uses: aws-actions/aws-codebuild-run-build@v1
-    #   id: codebuild
-    #   with:
-    #     project-name: ${{ secrets.CODEBUILD_PROJECT }}
-    #     source-version-override: ${{ github.event.inputs.branch }}
-    #     env-vars-for-codebuild: |
-    #       [
-    #         {
-    #           "name": "GITHUB_REF",
-    #           "value": "refs/heads/${{ github.event.inputs.branch }}"
-    #         },
-    #         {
-    #           "name": "BRANCH_NAME",
-    #           "value": "${{ env.BRANCH_NAME }}"
-    #         },
-    #         {
-    #           "name": "ECR_REPOSITORY_NAME",
-    #           "value": "${{ secrets.ECR_REPOSITORY }}"
-    #         },
-    #         {
-    #           "name": "LAMBDA_FUNCTION_NAME",
-    #           "value": "${{ secrets.LAMBDA_FUNCTION_NAME }}"
-    #         }
-    #       ]
+    - name: update lambda function with existing image
+      if: ${{ steps.validate_image.outputs.has_image == 'true' }}
+      run: |
+        aws lambda update-function-code \
+          --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
+          --region ${{ secrets.AWS_REGION_NAME }} \
+          --image-uri ${{ steps.validate_image.outputs.IMAGE_URI }}
+        echo "...lambda function updated with existing image ..."
 
-    # # update the lambda function with the new image created
-    # - name: update lambda function with a new image
-    #   if: ${{ !env.IMAGE_TAG }}
-    #   run: |
-    #     aws lambda update-function-code \
-    #       --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
-    #       --region ${{ secrets.AWS_REGION_NAME }} \
-    #       --image-uri "$IMAGE_URI_WITH_TAG"
+    - name: start codebuild for container build
+      if: ${{ steps.validate_image.outputs.has_image == 'false' }}
+      uses: aws-actions/aws-codebuild-run-build@v1
+      id: codebuild
+      with:
+        project-name: ${{ secrets.CODEBUILD_PROJECT }}
+        source-version-override: ${{ github.event.inputs.branch }}
+        env-vars-for-codebuild: |
+          [
+            {
+              "name": "GITHUB_REF",
+              "value": "refs/heads/${{ github.event.inputs.branch }}"
+            },
+            {
+              "name": "BRANCH_NAME",
+              "value": "${{ env.BRANCH_NAME }}"
+            },
+            {
+              "name": "ECR_REPOSITORY_NAME",
+              "value": "${{ secrets.ECR_REPOSITORY }}"
+            },
+            {
+              "name": "LAMBDA_FUNCTION_NAME",
+              "value": "${{ secrets.LAMBDA_FUNCTION_NAME }}"
+            }
+          ]
 
+    - name: update lambda function with a new image (after build)
+      if: ${{ steps.validate_image.outputs.has_image == 'false' }}
+      run: |
+        LATEST_IMAGE_URI=$(aws ecr describe-images --repository-name ${{ secrets.ECR_REPOSITORY }} --query 'sort_by(imageDetails,&imagePushedAt)[-1].imagePushedAt' | xargs -I {} aws ecr describe-images --repository-name ${{ secrets.ECR_REPOSITORY }} --query 'imageDetails[?imagePushedAt==`{}`].imageUri' --output text)
+
+        if [[ -z "$LATEST_IMAGE_URI" ]]; then
+          echo "... failed to retrieve the new image uri ..."
+          exit 1
+        fi
+
+        aws lambda update-function-code \
+          --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
+          --region ${{ secrets.AWS_REGION_NAME }} \
+          --image-uri "$LATEST_IMAGE_URI"
+        echo "... lambda function updated with newly built image ..."
 
     - name: verify lambda updates
       run: |
@@ -128,7 +135,7 @@ jobs:
           --query 'Code.ImageUri' \
           --output text)
 
-        if [[ $CURRENT_IMAGE == *"${{ env.IMAGE_TAG }}"* ]]; then
+        if [[ $CURRENT_IMAGE == *"dkr.ecr"* ]]; then
           echo "✅ lambda function successfully updated with new image"
         else
           echo "❌ lambda function update may have failed"
