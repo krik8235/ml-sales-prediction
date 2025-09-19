@@ -160,11 +160,11 @@ jobs:
         aws lambda update-function-configuration \
           --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
           --region ${{ secrets.AWS_REGION_NAME }} \
-          --environment Variables='{
-            "ENVIRONMENT": "production",
-            "VERSION": "${{ github.sha }}",
-            "DEPLOY_TIME": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'"
-          }'
+          --environment "Variables='{
+            \"ENVIRONMENT\": \"production\",
+            \"VERSION\": \"${{ github.sha }}\",
+            \"DEPLOY_TIME\": \"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'\"
+          }'"
 
     - name: cleanup
       if: always()
