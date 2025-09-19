@@ -158,15 +158,16 @@ jobs:
       if: github.event.inputs.branch == 'main'
       run: |
         DEPLOY_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+        IMAGE_TAG="${{ env.IMAGE_TAG }}"
+
+        echo "ENVIRONMENT: production"
+        echo "VERSION: $IMAGE_TAG"
+        echo "DEPLOY_TIME: $DEPLOY_TIME"
 
         aws lambda update-function-configuration \
           --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
           --region ${{ secrets.AWS_REGION_NAME }} \
-          --environment "Variables={
-            \"ENVIRONMENT\": \"production\",
-            \"VERSION\": \"${{ github.sha }}\",
-            \"DEPLOY_TIME\": \"$DEPLOY_TIME\"
-          }"
+          --environment "Variables={\"ENVIRONMENT\":\"production\",\"VERSION\":\"$IMAGE_TAG\",\"DEPLOY_TIME\":\"$DEPLOY_TIME\"}"
 
     - name: cleanup
       if: always()
