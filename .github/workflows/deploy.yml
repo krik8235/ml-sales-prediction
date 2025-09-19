@@ -164,6 +164,44 @@ jobs:
         echo "VERSION: $IMAGE_TAG"
         echo "DEPLOY_TIME: $DEPLOY_TIME"
 
+        echo "Waiting for function to be ready for configuration update..."
+
+        MAX_ATTEMPTS=10
+        ATTEMPT=1
+
+        while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+          echo "... attempt $ATTEMPT/$MAX_ATTEMPTS: checking function state ..."
+
+          FUNCTION_STATE=$(aws lambda get-function \
+            --function-name "$FUNCTION_NAME" \
+            --region "$AWS_REGION" \
+            --query 'Configuration.State' \
+            --output text)
+
+          LAST_UPDATE_STATUS=$(aws lambda get-function \
+            --function-name "$FUNCTION_NAME" \
+            --region "$AWS_REGION" \
+            --query 'Configuration.LastUpdateStatus' \
+            --output text)
+
+          if [ "$FUNCTION_STATE" = "Active" ] && [ "$LAST_UPDATE_STATUS" = "Successful" ]; then
+            echo "✅ function is ready for configuration update"
+            break
+          elif [ "$LAST_UPDATE_STATUS" = "Failed" ]; then
+            echo "❌ function update failed"
+            exit 1
+          else
+            echo "function not ready yet, waiting 10 seconds..."
+            sleep 10
+            ATTEMPT=$((ATTEMPT + 1))
+          fi
+        done
+
+        if [ $ATTEMPT -gt $MAX_ATTEMPTS ]; then
+          echo "❌ Timeout waiting for function to be ready"
+          exit 1
+        fi
+
         aws lambda update-function-configuration \
           --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
           --region ${{ secrets.AWS_REGION_NAME }} \
