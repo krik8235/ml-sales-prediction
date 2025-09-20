@@ -13,7 +13,7 @@ on:
           - develop
 
 env:
-  BRANCH_NAME: ${{ github.event.inputs.branch }}
+  BRANCH_NAME: 'main'
   GITHUB_SHA: ${{ github.sha }}
 
 permissions:
@@ -28,7 +28,7 @@ jobs:
     - name: checkout code
       uses: actions/checkout@v4
       with:
-        ref: env.BRANCH_NAME
+        ref: ${{ github.event.inputs.branch }}
 
     - name: set up python
       uses: actions/setup-python@v5
@@ -98,7 +98,7 @@ jobs:
             },
             {
               "name": "BRANCH_NAME",
-              "value": "${{ env.BRANCH_NAME }}"
+              "value": "${{ github.event.inputs.branch }}"
             },
             {
               "name": "ECR_REPOSITORY_NAME",
