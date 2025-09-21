@@ -56,9 +56,8 @@ phases:
       - echo "=== Build Phase Started ==="
       # build docker image
       - echo "... building the docker image ..."
-      - docker build -t my-app -f Dockerfile.lambda .
-
-      - docker tag $ECR_REPOSITORY_NAME:latest $REPOSITORY_URI:$IMAGE_TAG
+      - docker build -t my-app -f Dockerfile.lambda . --platform linux/amd64
+      - docker tag my-app:latest $REPOSITORY_URI:$IMAGE_TAG
 
       # show image details
       - echo "... docker images built:"
