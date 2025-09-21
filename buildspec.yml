@@ -51,6 +51,8 @@ phases:
         aws ecr describe-repositories --repository-names $ECR_REPOSITORY_NAME --region $AWS_DEFAULT_REGION || \
         aws ecr create-repository --repository-name $ECR_REPOSITORY_NAME --region $AWS_DEFAULT_REGION
 
+      - export DOCKER_BUILDKIT=1
+
   build:
     commands:
       - echo "=== Build Phase Started ==="
