@@ -14,8 +14,7 @@ WORKDIR /app
 COPY . /app/
 
 # install deps
-RUN pip install --no-cache-dir -r requirements.txt
-# RUN pip install --no-cache-dir -r requirements_dev.txt
+RUN pip install --no-cache-dir -r requirements.txt  --target "${LAMBDA_TASK_ROOT}"
 
 
 ENTRYPOINT [ "python" ]

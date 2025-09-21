@@ -15,6 +15,8 @@ on:
 env:
   BRANCH_NAME: 'main'
   GITHUB_SHA: ${{ github.sha }}
+  API_ENDPOINT: ${{ secrets.API_ENDPOINT }}
+  CLIENT_A: ${{ secrets.CLIENT_A }}
 
 permissions:
   id-token: write
@@ -158,10 +160,14 @@ jobs:
       run: |
         DEPLOY_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
         IMAGE_TAG="${{ env.IMAGE_TAG }}"
+        CLIENT_A="${{ env.CLIENT_A }}"
+        API_ENDPOINT="${{ env.API_ENDPOINT }}"
 
         echo "ENVIRONMENT: production"
         echo "VERSION: $IMAGE_TAG"
         echo "DEPLOY_TIME: $DEPLOY_TIME"
+        echo "CLIENT_A: $CLIENT_A"
+        echo "API_ENDPOINT: $API_ENDPOINT"
 
         echo "... waiting for function to be ready for configuration update ..."
 
