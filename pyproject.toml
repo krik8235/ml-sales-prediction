@@ -24,6 +24,8 @@ dependencies = [
     "tensorflow>=2.19.0",
     "torch>=2.7.1",
     "waitress>=3.0.2",
+    "fastparquet>=2024.11.0",
+    "pyarrow>=21.0.0",
 ]
 
 [project.urls]
@@ -61,7 +63,5 @@ exclude_dirs = [""]
 
 [dependency-groups]
 dev = [
-    "fastparquet>=2024.11.0",
-    "pyarrow>=21.0.0",
     "pytest>=8.4.2",
 ]

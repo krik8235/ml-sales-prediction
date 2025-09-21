@@ -10,6 +10,8 @@ env:
   API_ENDPOINT: ${{ secrets.API_ENDPOINT }}
   CLIENT_A: ${{ secrets.CLIENT_A }}
 
+
+# set permissions for oicd (open id connect) authentication with aws
 permissions:
   id-token: write  # for requesting the jwt token from GitHub's OIDC provider.
   contents: read   # for checking out the code in the repo
@@ -17,11 +19,11 @@ permissions:
 
 jobs:
   build_and_test:
-    # set permissions for oicd (open id connect) authentication with aws
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
     steps:
+      # preparation
       - name: checkout repository code
         uses: actions/checkout@v4
 
@@ -37,6 +39,7 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements_dev.txt
 
+      # testing
       - name: run pytest
         run: pytest
         env:
@@ -73,7 +76,7 @@ jobs:
           aws sts get-caller-identity
           echo "✅ oidc authentication successful"
 
-      # trigger aws codebuild to start the project named  ${{ secrets.CODEBUILD_PROJECT }}
+      # building - trigger aws codebuild to start the project named  ${{ secrets.CODEBUILD_PROJECT }}
       - name: trigger aws codebuild
         uses: aws-actions/aws-codebuild-run-build@v1
         id: codebuild
@@ -105,7 +108,7 @@ jobs:
             echo "✅ codebuild completed successfully"
           fi
 
-      - name: upload build artifacts (optional)
+      - name: upload build artifacts
         if: always()
         run: |
           echo "build completed for commit: ${{ github.sha }}"

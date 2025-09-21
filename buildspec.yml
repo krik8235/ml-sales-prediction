@@ -100,6 +100,11 @@ phases:
           echo "... build type not specified - skipping lambda deployment"
         fi
 
+      # temp
+      - echo "=== Debugging Container Contents ==="
+      - docker run --entrypoint="/bin/ls" my-app:latest -R /app
+      - echo "=== End Debugging ==="
+
 artifacts:
   files:
     - '**/*'

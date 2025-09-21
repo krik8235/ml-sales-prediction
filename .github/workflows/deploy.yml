@@ -153,7 +153,7 @@ jobs:
 
         cat response.json
 
-    - name: update lambda environment variables (if needed)
+    - name: update lambda environment variables
       if: github.event.inputs.branch == 'main'
       run: |
         DEPLOY_TIME=$(date -u +%Y-%m-%dT%H:%M:%SZ)
