@@ -4,17 +4,14 @@ FROM public.ecr.aws/lambda/python:3.12
 # to silence joblib warnings on multiprocessing attempt failure
 ENV JOBLIB_MULTIPROCESSING=0
 
-# set the working directory in the container
+##  set the working directory in the container
 WORKDIR /app
-
-# # to handle lightgbm
-# RUN dnf install -y libgomp
 
 # copy the entire repository (except .dockerignore) contents into the container at /app
 COPY . /app/
 
 # install deps
-RUN pip install --no-cache-dir -r requirements.txt  --target "${LAMBDA_TASK_ROOT}"
+RUN pip install --no-cache-dir -r requirements.txt
 
 
 ENTRYPOINT [ "python" ]
