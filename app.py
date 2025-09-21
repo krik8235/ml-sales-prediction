@@ -125,7 +125,7 @@ def get_redis_client():
 
 def load_x_test():
     global X_test
-    if not os.environ.get('PYTEST_RUN'):
+    if not os.environ.get('PYTEST_RUN', False):
         main_logger.info("... loading x_test ...")
         try:
             x_test_io = s3_load(file_path=X_TEST_PATH)
@@ -139,7 +139,7 @@ def load_x_test():
 
 def load_preprocessor():
     global preprocessor
-    if not os.environ.get('PYTEST_RUN'):
+    if not os.environ.get('PYTEST_RUN', False):
         main_logger.info("... loading transformer ...")
         try:
             preprocessor_tempfile_path = s3_load_to_temp_file(PREPROCESSOR_PATH)

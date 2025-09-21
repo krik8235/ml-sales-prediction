@@ -46,11 +46,10 @@ phases:
       - |
         aws ssm put-parameter --name "/my-app/image-tag" --value "$IMAGE_TAG" --type "String" --overwrite
 
-
-      # create ecr registory if not exist
-      - |
-        aws ecr describe-repositories --repository-names $ECR_REPOSITORY_NAME --region $AWS_DEFAULT_REGION || \
-        aws ecr create-repository --repository-name $ECR_REPOSITORY_NAME --region $AWS_DEFAULT_REGION
+      # # create ecr registory if not exist
+      # - |
+      #   aws ecr describe-repositories --repository-names $ECR_REPOSITORY_NAME --region $AWS_DEFAULT_REGION || \
+      #   aws ecr create-repository --repository-name $ECR_REPOSITORY_NAME --region $AWS_DEFAULT_REGION
 
   build:
     commands:
@@ -100,10 +99,10 @@ phases:
           echo "... build type not specified - skipping lambda deployment"
         fi
 
-      # temp
-      - echo "=== Debugging Container Contents ==="
-      - docker run --entrypoint="/bin/ls" my-app:latest -R /app
-      - echo "=== End Debugging ==="
+      # # temp debug
+      # - echo "=== Debugging Container Contents ==="
+      # - docker run --entrypoint="/bin/ls" my-app:latest -R /app
+      # - echo "=== End Debugging ==="
 
 artifacts:
   files:
