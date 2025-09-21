@@ -85,7 +85,9 @@ jobs:
           source-version-override: ${{ github.sha }}
           env-vars-for-codebuild: | # pass the env vars to buildspec.yml. set BUILD_TYPE as test not to trigger the deployment
             GITHUB_SHA=${{ github.sha }},
-            BUILD_TYPE=test
+            BUILD_TYPE=test,
+            AWS_ACCOUNT_ID=${{ secrets.AWS_ACCOUNT_ID }},
+            AWS_DEFAULT_REGION=${{ secrets.AWS_REGION_NAME }}
 
       - name: check codebuild status
         if: always()

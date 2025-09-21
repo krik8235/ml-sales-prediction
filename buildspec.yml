@@ -71,7 +71,7 @@ phases:
       - echo "... pushing docker images to ecr ..."
       - docker tag my-app:$IMAGE_TAG $REPOSITORY_URI:$IMAGE_TAG
       - docker push ${REPOSITORY_URI}:${IMAGE_TAG}
-      - echo "Images pushed successfully"
+      - echo "... images pushed successfully ..."
 
       # update lambda function (only for deploy builds)
       - |
