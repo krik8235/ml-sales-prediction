@@ -57,7 +57,6 @@ phases:
       # build docker image
       - echo "... building the docker image ..."
       - docker build --platform linux/amd64 --provenance=false -f Dockerfile.lambda -t my-app:$IMAGE_TAG .
-      # - docker tag my-app:latest $REPOSITORY_URI:$IMAGE_TAG
 
       # show image details
       - echo "... docker images built:"
@@ -70,6 +69,7 @@ phases:
 
       # push images to ecr
       - echo "... pushing docker images to ecr ..."
+      - docker tag my-app:$IMAGE_TAG $REPOSITORY_URI:$IMAGE_TAG
       - docker push ${REPOSITORY_URI}:${IMAGE_TAG}
       - echo "Images pushed successfully"
 
