@@ -210,7 +210,7 @@ jobs:
         aws lambda update-function-configuration \
           --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
           --region ${{ secrets.AWS_REGION_NAME }} \
-          --environment "Variables={ENVIRONMENT=production,VERSION=$IMAGE_TAG,DEPLOY_TIME=$DEPLOY_TIME}"
+          --environment "Variables={ENVIRONMENT=production,VERSION=$IMAGE_TAG,DEPLOY_TIME=$DEPLOY_TIME,CLIENT_A=$CLIENT_A,API_ENDPOINT=$API_ENDPOINT}"
 
     - name: cleanup
       if: always()
