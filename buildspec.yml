@@ -46,10 +46,10 @@ phases:
       - |
         aws ssm put-parameter --name "/my-app/image-tag" --value "$IMAGE_TAG" --type "String" --overwrite
 
-      # # create ecr registory if not exist
-      # - |
-      #   aws ecr describe-repositories --repository-names $ECR_REPOSITORY_NAME --region $AWS_DEFAULT_REGION || \
-      #   aws ecr create-repository --repository-name $ECR_REPOSITORY_NAME --region $AWS_DEFAULT_REGION
+      # create or retrieve ecr repo
+      - |
+        aws ecr describe-repositories --repository-names $ECR_REPOSITORY_NAME --region $AWS_DEFAULT_REGION || \
+        aws ecr create-repository --repository-name $ECR_REPOSITORY_NAME --region $AWS_DEFAULT_REGION
 
   build:
     commands:
