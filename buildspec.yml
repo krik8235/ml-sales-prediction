@@ -51,16 +51,13 @@ phases:
         aws ecr describe-repositories --repository-names $ECR_REPOSITORY_NAME --region $AWS_DEFAULT_REGION || \
         aws ecr create-repository --repository-name $ECR_REPOSITORY_NAME --region $AWS_DEFAULT_REGION
 
-      - export DOCKER_BUILDKIT=1
-
   build:
     commands:
       - echo "=== Build Phase Started ==="
       # build docker image
       - echo "... building the docker image ..."
-      - docker buildx build --platform linux/amd64,linux/arm64 --push -t $REPOSITORY_URI:$IMAGE_TAG -f Dockerfile.lambda .
-      # - docker build -t my-app -f Dockerfile.lambda . --platform linux/amd64,linux/arm64
-      # - docker tag my-app:latest $REPOSITORY_URI:$IMAGE_TAG
+      - docker build -t my-app -f Dockerfile.lambda . --platform linux/arm64
+      - docker tag my-app:latest $REPOSITORY_URI:$IMAGE_TAG
 
       # show image details
       - echo "... docker images built:"
