@@ -56,7 +56,7 @@ phases:
       - echo "=== Build Phase Started ==="
       # build docker image
       - echo "... building the docker image ..."
-      - docker buildx build -t my-app -f Dockerfile.lambda .
+      - docker build --platform linux/amd64 --provenance=false -f Dockerfile.lambda .
       - docker tag my-app:latest $REPOSITORY_URI:$IMAGE_TAG
 
       # show image details
