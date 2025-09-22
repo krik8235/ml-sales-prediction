@@ -36,3 +36,5 @@ notebooks/
 # temp -
 deploy_production.yml
 deploy_staging.yml
+
+.pytest_cache/

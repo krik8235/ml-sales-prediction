@@ -56,9 +56,9 @@ phases:
       - echo "=== Build Phase Started ==="
       # build docker image
       - echo "... building the docker image ..."
-      - docker build --platform linux/amd64 --provenance=false -f Dockerfile.lambda.prod -t my-app:$IMAGE_TAG .
+      - docker build --platform linux/amd64 --provenance=false -f Dockerfile.lambda.production -t my-app:$IMAGE_TAG .
       # - docker buildx create --use --name lambda-builder || true # use buildx for architecture control
-      # - docker buildx build --platform linux/amd64 --provenance=false --load -f Dockerfile.lambda -t my-app:$IMAGE_TAG .
+      # - docker buildx build --platform linux/amd64 --provenance=false --load -f Dockerfile.lambda.production -t my-app:$IMAGE_TAG .
 
       # show image details
       - echo "... docker images built:"

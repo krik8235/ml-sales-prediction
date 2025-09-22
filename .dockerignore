@@ -9,7 +9,8 @@ dist/
 *.csv
 [a-f]*.log
 
-
+.pytest_cache/
+pytest.ini
 __pycache__/
 
 .legacy/
@@ -39,3 +40,5 @@ gbm_grid/
 .pre-commit-config.yaml
 
 uv.lock
+
+.github/
