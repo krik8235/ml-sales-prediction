@@ -110,7 +110,8 @@ sklearn_models = [
     }
 ]
 
-def run_main():
+
+def main_script():
     load_dotenv(override=True)
 
     # explicitly disable multithreaded operation - forcing PyTorch to use a single thread for CPU operations
@@ -122,9 +123,9 @@ def run_main():
     os.makedirs(PRODUCTION_MODEL_FOLDER_PATH, exist_ok=True)
 
     # create train, val, test datasets
-    X_train, X_val, X_test, y_train, y_val, y_test, preprocessor = data_handling.main_script()
+    X_train, X_val, _, y_train, y_val, _, preprocessor = data_handling.main_script()
 
-    # processor
+    # load trained processor
     joblib.dump(preprocessor, PREPROCESSOR_PATH)
     s3_upload(file_path=PREPROCESSOR_PATH)
 
@@ -162,4 +163,4 @@ def run_main():
 
 
 if __name__ == '__main__':
-    run_main()
+    main_script()

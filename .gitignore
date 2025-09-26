@@ -15,7 +15,6 @@ tmp/
 
 tmp/
 
-data/
 models/
 
 awscli-bundle/
@@ -33,8 +32,6 @@ article_code_snippets.ipynb
 notebooks/
 
 
-# temp -
-deploy_production.yml
-deploy_staging.yml
-
 .pytest_cache/
+
+# .dvc/

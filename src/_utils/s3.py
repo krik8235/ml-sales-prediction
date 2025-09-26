@@ -43,7 +43,7 @@ def _get_latest_s3_file_key(prefix=""):
         return None
 
 
-def s3_load(file_path = None, prefix = '', verbose: bool = False):
+def s3_extract(file_path = None, prefix = '', verbose: bool = False):
     load_dotenv(override=True)
     S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'ml-sales-pred')
     s3_client = boto3.client('s3', region_name=os.environ.get('AWS_REGION_NAME', 'us-east-1'))
@@ -82,7 +82,7 @@ def s3_load(file_path = None, prefix = '', verbose: bool = False):
         raise
 
 
-def s3_load_to_temp_file(file_path):
+def s3_extract_from_temp_file(file_path):
     load_dotenv(override=True)
     S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'ml-sales-pred')
     s3_client = boto3.client('s3', region_name=os.environ.get('AWS_REGION_NAME', 'us-east-1'))

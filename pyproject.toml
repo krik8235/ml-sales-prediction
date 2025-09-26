@@ -66,5 +66,6 @@ exclude_dirs = [""]
 
 [dependency-groups]
 dev = [
+    "dvc[s3]>=3.63.0",
     "pytest>=8.4.2",
 ]

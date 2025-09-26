@@ -26,15 +26,15 @@ def mock_external_dependencies(monkeypatch):
     """
     main_logger.info("... mocking external dependencies for pytest run ...")
 
-    # mock the s3_load_to_temp_file function to prevent s3 access
-    def mock_s3_load_to_temp_file(file_path):
+    # mock the s3_extract_from_temp_file function to prevent s3 access
+    def mock_s3_extract_from_temp_file(file_path):
         return "/tmp/mock_file"
 
-    # mock the s3_load function
-    def mock_s3_load(file_path):
+    # mock the s3_extract function
+    def mock_s3_extract(file_path):
         return MagicMock()
 
-    # mock the s3_load function
+    # mock the s3_extract function
     def mock_joblib_load(file_path):
         mock_preprocessor = MagicMock()
         mock_preprocessor.transform.return_value = np.array([[0.1, 0.2, 0.3, 0.4]])
@@ -49,8 +49,8 @@ def mock_external_dependencies(monkeypatch):
             mock_client.get_caller_identity.return_value = {'Arn': 'mock_arn'}
         return mock_client
 
-    monkeypatch.setattr(app, 's3_load_to_temp_file', mock_s3_load_to_temp_file)
-    monkeypatch.setattr(app, 's3_load', mock_s3_load)
+    monkeypatch.setattr(app, 's3_extract_from_temp_file', mock_s3_extract_from_temp_file)
+    monkeypatch.setattr(app, 's3_extract', mock_s3_extract)
     monkeypatch.setattr('boto3.client', mock_boto3_client)
     monkeypatch.setattr(app.joblib, 'load', mock_joblib_load)
 

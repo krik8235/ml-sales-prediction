@@ -1,0 +1,47 @@
+# dvc repro
+
+stages:
+  etl_pipeline:
+    # run the script
+    cmd: python src/data_handling/etl_pipeline.py
+
+    # dependencies necessary to run the script
+    deps:
+      - src/data_handling/etl_pipeline.py    # the main etl script
+      - src/data_handling/          # all data_handling scripts
+      - src/_utils                  # all utility functions
+
+    params:
+      - params.stockcode
+
+    # outputs
+    outs:
+      - data/original_df.parquet # output from the first part of the script
+      - data/processed_df.parquet  # processed dataframe
+
+  preprocess:
+    cmd: >
+      python src/data_handling/preprocess.py --target_col ${params.target_col} --should_scale ${params.should_scale} --verbose ${params.verbose}
+
+    deps:
+      - src/data_handling/preprocess.py
+      - src/data_handling/
+      - src/_utils
+
+    # params from params.yaml
+    params:
+      - params.target_col
+      - params.should_scale
+      - params.verbose
+
+    outs:
+      # train, val, test datasets
+      - data/x_train_df.parquet
+      - data/x_val_df.parquet
+      - data/x_test_df.parquet
+      - data/y_train_df.parquet
+      - data/y_val_df.parquet
+      - data/y_test_df.parquet
+
+      # fitted preprocessor
+      - preprocessors/column_transformer.pkl

@@ -1,55 +1,38 @@
 import os
 import sys
-import joblib
 import torch
-from dotenv import load_dotenv # type: ignore
-from sklearn.model_selection import train_test_split
+from dotenv import load_dotenv
 
 import src.data_handling as data_handling
 import src.model.torch_model as t
 from src._utils import s3_upload, main_logger
 
 
-# paths
-PRODUCTION_MODEL_FOLDER_PATH = 'models/production'
+def main_script_stockcode(stockcode: str):
+    load_dotenv(override=True)
+
+    # file paths
+    PRODUCTION_MODEL_FOLDER_PATH = os.path.join('models', 'production')
+    os.makedirs(PRODUCTION_MODEL_FOLDER_PATH, exist_ok=True)
+
+    DFN_FILE_PATH_STOCKCODE = os.path.join(PRODUCTION_MODEL_FOLDER_PATH, f'dfn_best_{stockcode}.pth')
+
+    X_train, X_val, _, y_train, y_val, _, _ = data_handling.main_script_by_stockcode(stockcode=stockcode)
+
+    _, checkpoint = t.main_script(X_train, X_val, y_train, y_val, should_local_save=False, n_trials=100)
+    torch.save(checkpoint, DFN_FILE_PATH_STOCKCODE)
+    s3_upload(file_path=DFN_FILE_PATH_STOCKCODE)
+
 
 
 if __name__ == '__main__':
-    load_dotenv(override=True)
+    # fetch stockcode
+    stockcode = sys.argv[1] if len(sys.argv) > 1 else None
+    if not stockcode: main_logger.error('missing a stockcode'); raise
 
     device_type = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
     if device_type == 'cpu':
         os.environ['OMP_NUM_THREADS'] = '1'
         os.environ['MKL_NUM_THREADS'] = '1'
 
-    os.makedirs(PRODUCTION_MODEL_FOLDER_PATH, exist_ok=True)
-
-    stockcode = sys.argv[1] if len(sys.argv) > 1 else None
-    if not stockcode: main_logger.error('missing a stockcode'); raise
-
-    # file paths
-    DFN_FILE_PATH_OVERALL_BEST = os.path.join(PRODUCTION_MODEL_FOLDER_PATH, 'dfn_best.pth')
-    DFN_FILE_PATH_STOCKCODE = os.path.join(PRODUCTION_MODEL_FOLDER_PATH, f'dfn_best_{stockcode}.pth')
-    PREPROCESSOR_PATH = 'preprocessors/column_transformer.pkl'
-
-    preprocessor = joblib.load(PREPROCESSOR_PATH)
-
-    df = data_handling.scripts.load_original_dataframe()
-    df = data_handling.scripts.structure_missing_values(df=df)
-    df = data_handling.scripts.handle_feature_engineering(df=df)
-    df_stockcode = df[df['stockcode'] == stockcode]
-
-    target_col = 'quantity'
-    X_stockcode = df_stockcode.copy().drop(columns=target_col)
-    y_stockcode = df_stockcode.copy()[target_col]
-
-    test_size, random_state = int(min(len(X_stockcode) * 0.2, 500)), 42  # type: ignore
-    X_tv, X_test, y_tv, _ = train_test_split(X_stockcode, y_stockcode, test_size=test_size, random_state=random_state)
-    X_train, X_val, y_train, y_val = train_test_split(X_tv, y_tv, test_size=test_size, random_state=random_state)
-
-    X_train_processed = preprocessor.transform(X_train)
-    X_val_processed = preprocessor.transform(X_val)
-
-    model, checkpoint = t.main_script(X_train_processed, X_val_processed, y_train, y_val, should_local_save=False, n_trials=100)
-    torch.save(checkpoint, DFN_FILE_PATH_STOCKCODE)
-    s3_upload(file_path=DFN_FILE_PATH_STOCKCODE)
+    main_script_stockcode(stockcode=stockcode)

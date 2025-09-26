@@ -1,10 +1,12 @@
 import os
 import numpy as np
 import pandas as pd
+# from prefect import task
 
 from src._utils import main_logger, s3_upload
 
 
+# @task(name='structure missing values')
 def structure_missing_values(df: pd.DataFrame, target_cols_to_impute: list = [], verbose: bool = False) -> pd.DataFrame:
     pd.set_option('future.no_silent_downcasting', True)
 
@@ -56,6 +58,7 @@ def _create_imputation_df(original_df, stockcode):
     return merged_df
 
 
+# @task(name='create imputation values')
 def create_imputation_values_by_stockcode(base_df, stockcode=None):
     if stockcode is None:
         stockcodes = base_df['stockcode'].unique()
