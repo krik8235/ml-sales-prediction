@@ -10,5 +10,16 @@ ignore:
       reason: "No direct upgrade or patch available for this issue."
       expires: "2030-01-01T00:00:00.000Z"
 
+  SNYK-PYTHON-PREFECT-8136231:
+    - '*':
+      reason: "No direct upgrade or patch available for this issue."
+      expires: "2030-01-01T00:00:00.000Z"
+
+  SNYK-PYTHON-PREFECT-9487016:
+    - '*':
+      reason: "No direct upgrade or patch available for this issue."
+      expires: "2030-01-01T00:00:00.000Z"
+
+
 language-settings:
   python: '3.12'
