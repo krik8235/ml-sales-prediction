@@ -108,7 +108,7 @@ def mock_model_scripts():
 def test_data_loading_and_preprocessor_saving(mock_data_handling, mock_s3_upload, mock_joblib_dump):
     """tests that data loading is called and the preprocessor is saved and uploaded."""
 
-    main_script.run_main()
+    main_script.main_script()
 
     # verify that data_handling.main_script was called
     mock_data_handling.assert_called_once()
@@ -125,7 +125,7 @@ def test_model_optimization_and_saving(mock_data_handling, mock_model_scripts, m
     """tests that each model's optimization script is called and the results are saved and uploaded."""
 
     mock_torch_script, mock_sklearn_script = mock_model_scripts
-    main_script.run_main()
+    main_script.main_script()
 
     # verify each model's main_script was called
     assert mock_torch_script.called

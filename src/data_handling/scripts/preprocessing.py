@@ -70,8 +70,8 @@ def transform_input(
     X_val_processed = preprocessor.transform(X_val)
     X_test_processed = preprocessor.transform(X_test)
 
-    if verbose: main_logger.info(
-        f'transformed input datasets: X_train: {X_train_processed.shape}, X_val: {X_val_processed.shape}, X_test: {X_test_processed.shape}')
+    if verbose:
+        main_logger.info(f'transformed input datasets: X_train: {X_train_processed.shape}, X_val: {X_val_processed.shape}, X_test: {X_test_processed.shape}')
 
     # raise error if nan or inf in the preprocessed data
     try:

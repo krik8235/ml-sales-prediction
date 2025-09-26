@@ -32,6 +32,7 @@
   - [Publishing Docker image](#publishing-docker-image)
   - [Connecting cache storage](#connecting-cache-storage)
 - [Package Management](#package-management)
+- [Data CI/CD Automation with Prefect](#data-cicd-automation-with-prefect)
 - [Contributing](#contributing)
   - [Pre-commit hooks](#pre-commit-hooks)
 - [Trouble Shooting](#trouble-shooting)
@@ -239,6 +240,43 @@ uv sync
 
 <hr />
 
+## Data CI/CD Automation with Prefect
+
+1. Run Prefect server in local
+
+```bash
+uv run prefect server start
+export PREFECT_API_URL="http://127.0.0.1:4200/api"
+```
+
+2. Create Docker image
+
+```bash
+uv run src/data_handling/prefect_deploy.py
+```
+
+
+3. Run the Prefect worker
+
+```bash
+# add a user group USER to the docker
+sudo dscl . -append /Groups/docker GroupMembership $USER
+
+prefect worker start --pool <YOUR-WORKER-POOL-NAME>
+```
+
+
+4. Create a flow run for deployment.
+
+```bash
+prefect deployment run 'etl-pipeline/deploy-etl-pipeline'
+```
+
+You can find the dashboard at http://127.0.0.1:4200/dashboard.
+
+Ref. [Prefect official documentation - deploy via Python](https://docs.prefect.io/v3/how-to-guides/deployments/deploy-via-python)
+
+<hr />
 
 ## Contributing
 
@@ -308,11 +346,17 @@ Common issues and solutions:
 
 ```
 .
-.venv/                  [.gitignore]    # stores uv venv
+└── .venv/              [.gitignore]    # stores uv venv
 │
-└── data/               [.gitignore]
+└── .github/                            # infrastructure ci/cd
+│
+└── .dvc/                               # dvc version control
+│
+└── data/                               # version tracked by dvc
 │     └──raw/                           # stores raw data
 │     └──preprocessed/                  # stores processed data after imputation and engineering
+│
+└── preprocessors/                      # version tracked by dvc
 │
 └── models/             [.gitignore]    # stores serialized model after training and tuning
 │     └──dfn/                           # deep feedforward network
@@ -332,11 +376,20 @@ Common issues and solutions:
 │     └──main.py                        # main script to run the inference locally
 │
 └──app.py                               # Flask application (API endpoints)
+│
 └──pyproject.toml                       # project configuration
+│
 └──.env                [.gitignore]     # environment variables
+│
 └──uv.lock                              # dependency locking
+│
 └──Dockerfile                           # for Docker container image
 └──.dockerignore
+│
 └──requirements.txt
+│
 └──.python-version                      # python version locking (3.12)
+│
+└──dvc.yaml                             # config for dvc commands
+└──dvc.lock
 ```

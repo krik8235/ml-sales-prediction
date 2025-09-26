@@ -6,11 +6,11 @@ on:
       branch:
         description: 'The branch to deploy from'
         required: true
-        default: 'develop'
+        default: 'dev'
         type: choice
         options:
           - main
-          - develop
+          - dev
 
 env:
   BRANCH_NAME: 'main'

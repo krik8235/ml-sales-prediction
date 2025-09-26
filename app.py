@@ -1,27 +1,27 @@
 import os
-import boto3 # type: ignore
+import boto3
 import json
 import time
 import math
 import warnings
 import hashlib
-import torch # type: ignore
+import torch
 import pickle
 import pandas as pd
-import numpy as np # type: ignore
-import awsgi # type: ignore
-import joblib # type: ignore
-import redis # type: ignore
-import redis.cluster # type: ignore
-from redis.cluster import ClusterNode # type: ignore
-from flask import Flask, request, jsonify # type: ignore
+import numpy as np
+import awsgi
+import joblib
+import redis
+import redis.cluster
+from redis.cluster import ClusterNode
+from flask import Flask, request, jsonify
 from flask_cors import cross_origin
 from waitress import serve
-from dotenv import load_dotenv # type: ignore
+from dotenv import load_dotenv
 
 import src.model.torch_model as t
 import src.data_handling as data_handling
-from src._utils import main_logger, s3_load, s3_load_to_temp_file
+from src._utils import main_logger, s3_extract, s3_extract_from_temp_file
 
 # silence warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -128,7 +128,7 @@ def load_x_test():
     if not os.environ.get('PYTEST_RUN', False):
         main_logger.info("... loading x_test ...")
         try:
-            x_test_io = s3_load(file_path=X_TEST_PATH)
+            x_test_io = s3_extract(file_path=X_TEST_PATH)
             if x_test_io is not None:
                 X_test = pd.read_parquet(x_test_io)
             else:
@@ -142,7 +142,7 @@ def load_preprocessor():
     if not os.environ.get('PYTEST_RUN', False):
         main_logger.info("... loading transformer ...")
         try:
-            preprocessor_tempfile_path = s3_load_to_temp_file(PREPROCESSOR_PATH)
+            preprocessor_tempfile_path = s3_extract_from_temp_file(PREPROCESSOR_PATH)
             preprocessor = joblib.load(preprocessor_tempfile_path)
             os.remove(preprocessor_tempfile_path)
         except:
@@ -156,7 +156,7 @@ def load_model(stockcode: str = ''):
         DFN_FILE_PATH_STOCKCODE = os.path.join(PRODUCTION_MODEL_FOLDER_PATH, f'dfn_best_{stockcode}.pth')
         try:
             main_logger.info("... loading artifacts - trained dfn by stockcode ...")
-            model_data_bytes_io = s3_load(file_path=DFN_FILE_PATH_STOCKCODE)
+            model_data_bytes_io = s3_extract(file_path=DFN_FILE_PATH_STOCKCODE)
             checkpoint = torch.load(model_data_bytes_io, weights_only=False, map_location=device) # type: ignore
             model = t.scripts.load_model(checkpoint=checkpoint, file_path=DFN_FILE_PATH_STOCKCODE)
             model.eval()
@@ -164,7 +164,7 @@ def load_model(stockcode: str = ''):
         except:
             try:
                 main_logger.info("... loading artifacts - trained dfn ...")
-                model_data_bytes_io_ = s3_load(file_path=DFN_FILE_PATH)
+                model_data_bytes_io_ = s3_extract(file_path=DFN_FILE_PATH)
                 checkpoint_ = torch.load(model_data_bytes_io_, weights_only=False, map_location=device) # type: ignore
                 model = t.scripts.load_model(checkpoint=checkpoint_, file_path=DFN_FILE_PATH)
                 model.eval()
@@ -174,7 +174,7 @@ def load_model(stockcode: str = ''):
     else:
         try:
             main_logger.info("... loading artifacts - trained dfn ...")
-            model_data_bytes_io_ = s3_load(file_path=DFN_FILE_PATH)
+            model_data_bytes_io_ = s3_extract(file_path=DFN_FILE_PATH)
             checkpoint_ = torch.load(model_data_bytes_io_, weights_only=False, map_location=device) # type: ignore
             model = t.scripts.load_model(checkpoint=checkpoint_, file_path=DFN_FILE_PATH)
             model.eval()
@@ -189,7 +189,7 @@ def load_artifacts_primary_model():
     try:
         # load trained processor
         main_logger.info("... loading artifacts - trained dfn ...")
-        model_data_bytes_io = s3_load(file_path=DFN_FILE_PATH)
+        model_data_bytes_io = s3_extract(file_path=DFN_FILE_PATH)
 
         if model_data_bytes_io is not None:
             checkpoint = torch.load(model_data_bytes_io, weights_only=False, map_location=device)
@@ -210,7 +210,7 @@ def load_artifacts_backup_model():
 
     try:
         main_logger.info('... loading gbm ...')
-        model_data_bytes_io = s3_load(file_path=GBM_FILE_PATH)
+        model_data_bytes_io = s3_extract(file_path=GBM_FILE_PATH)
         if model_data_bytes_io:
             model_data_bytes_io.seek(0)
             loaded_dict = pickle.load(model_data_bytes_io)
@@ -222,7 +222,7 @@ def load_artifacts_backup_model():
         main_logger.error(f"failed to load gbm from s3 using pickle. try loading svr instead as a backup model.")
         try:
             main_logger.info('... loading svr ...')
-            model_data_bytes_io = s3_load(file_path=SVR_FILE_PATH)
+            model_data_bytes_io = s3_extract(file_path=SVR_FILE_PATH)
             if model_data_bytes_io:
                 model_data_bytes_io.seek(0)
                 loaded_dict = pickle.load(model_data_bytes_io)
@@ -233,7 +233,7 @@ def load_artifacts_backup_model():
             main_logger.critical(f"failed to load svr from s3 using pickle. try loading elastic net instead as a backup model.")
             try:
                 main_logger.info('... loading en ...')
-                model_data_bytes_io = s3_load(file_path=EN_FILE_PATH)
+                model_data_bytes_io = s3_extract(file_path=EN_FILE_PATH)
                 if model_data_bytes_io:
                     model_data_bytes_io.seek(0)
                     loaded_dict = pickle.load(model_data_bytes_io)
@@ -294,7 +294,7 @@ def predict_price(stockcode):
             if cached_df_stockcode: df_stockcode = json.loads(json.dumps(cached_df_stockcode))
 
         if df_stockcode is None:
-            df_stockcode_bites_io = s3_load(file_path=file_path_df_stockcode[1:] if file_path_df_stockcode[0] == '/' else file_path_df_stockcode)
+            df_stockcode_bites_io = s3_extract(file_path=file_path_df_stockcode[1:] if file_path_df_stockcode[0] == '/' else file_path_df_stockcode)
             if df_stockcode_bites_io: df_stockcode = pd.read_parquet(df_stockcode_bites_io)
 
         # define the price range

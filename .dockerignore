@@ -42,3 +42,7 @@ gbm_grid/
 uv.lock
 
 .github/
+
+
+.dvc/
+.dvcignore
