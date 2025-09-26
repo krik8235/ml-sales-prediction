@@ -19,4 +19,3 @@ pyarrow>=21.0.0
 
 prefect>=3.4.19
 prefect-aws>=0.5.13
-prefect-lakefs>=0.3.0
