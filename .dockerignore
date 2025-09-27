@@ -16,10 +16,7 @@ __pycache__/
 .legacy/
 .venv/
 awscli-bundle/
-data/
 notebooks/
-preprocessors/
-models/
 
 tests/
 
