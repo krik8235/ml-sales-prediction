@@ -19,21 +19,11 @@ awscli-bundle/
 data/
 notebooks/
 preprocessors/
+models/
 
 tests/
 
 tmp/
-
-models/
-dfn_best/
-dfn_bayesian/
-dfn_grid/
-en_best/
-en_bayesian/
-en_grid/
-gbm_best/
-gbm_bayesian/
-gbm_grid/
 
 .note
 
@@ -44,5 +34,8 @@ uv.lock
 .github/
 
 
-.dvc/
+.dvc/cache
 .dvcignore
+
+reports/
+metrics/

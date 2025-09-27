@@ -7,11 +7,24 @@ ENV JOBLIB_MULTIPROCESSING=0
 ##  set the working directory in the container
 WORKDIR /app
 
+# copy dvc config
+COPY .dvc/config /app/.dvc/
+
+# copy dvc.yaml to access meta data stored in .yml
+COPY dvc.yaml /app/
+
 # copy the entire repository (except .dockerignore) contents into the container at /app
 COPY . /app/
 
 # install deps
 RUN pip install --no-cache-dir -r requirements.txt
+
+# install dvc deps
+RUN pip install --no-cache-dir dvc dvc-s3
+
+# dvc config - skip checking in github
+RUN dvc config core.no_scm true
+
 
 
 ENTRYPOINT [ "python" ]

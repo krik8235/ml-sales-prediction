@@ -1,5 +1,3 @@
-
-
 import os
 import sys
 import subprocess
@@ -24,7 +22,7 @@ def run_dvc_etl_pipeline():
 
     main_logger.info('... checking dvc status and running pipeline ...')
 
-    # dvc to check all stages on dvc.yaml and run only what is needed
+    # dvc to check all stages on dvc.yaml and run what's needed
     result = subprocess.run(["dvc", "repro"], capture_output=True, text=True, check=True)
     main_logger.info(f'... dvc output:\n{result.stdout}')
 
@@ -61,7 +59,7 @@ if __name__ == '__main__':
         name=f'weekly-data-flow',
         schedule=weekly_schedule,
         work_pool_name="wp-ml-sales-pred",
-        image=image_repo,
+        image=image_repo, # create a docker image at docker hub (local) or ecr (production)
         concurrency_limit=3,
         push=True
     )

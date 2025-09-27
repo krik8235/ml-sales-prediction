@@ -114,7 +114,7 @@ sklearn_models = [
 def main_script():
     load_dotenv(override=True)
 
-    # explicitly disable multithreaded operation - forcing PyTorch to use a single thread for CPU operations
+    # explicitly disable multithreaded operation - forcing pytorch to use a single thread for cpu operations
     device_type = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
     if device_type == 'cpu':
         os.environ["OMP_NUM_THREADS"] = "1"
@@ -123,11 +123,7 @@ def main_script():
     os.makedirs(PRODUCTION_MODEL_FOLDER_PATH, exist_ok=True)
 
     # create train, val, test datasets
-    X_train, X_val, _, y_train, y_val, _, preprocessor = data_handling.main_script()
-
-    # load trained processor
-    joblib.dump(preprocessor, PREPROCESSOR_PATH)
-    s3_upload(file_path=PREPROCESSOR_PATH)
+    X_train, X_val, _, y_train, y_val, _, _ = data_handling.main_script()
 
     ## models
     # torch dfn

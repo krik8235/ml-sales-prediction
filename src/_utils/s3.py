@@ -1,10 +1,10 @@
 import os
-import boto3 # type: ignore
+import boto3
 import io
 import gzip
 import tempfile
-from botocore.exceptions import ClientError # type: ignore
-from dotenv import load_dotenv # type: ignore
+from botocore.exceptions import ClientError
+from dotenv import load_dotenv
 
 from src._utils.log import main_logger
 
@@ -73,7 +73,7 @@ def s3_extract(file_path = None, prefix = '', verbose: bool = False):
                 decompressed_buffer = io.BytesIO(gzip.decompress(buffer.read()))
                 return decompressed_buffer
             else:
-                if verbose: main_logger.info("File is not gzipped. Returning as-is.")
+                if verbose: main_logger.info("file is not gzipped. Returning as-is.")
                 buffer.seek(0)
                 return buffer
 

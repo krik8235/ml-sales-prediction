@@ -19,7 +19,6 @@ def reconstruct_dataframe(original_df: pd.DataFrame, new_df_to_add: pd.DataFrame
     return df
 
 
-
 def main_script(target_col: str = 'quantity', should_scale: bool = True, impute_stockcode: bool = False, verbose: bool = False):
     etl_pipeline(impute_stockcode=impute_stockcode)
 
@@ -30,7 +29,7 @@ def main_script(target_col: str = 'quantity', should_scale: bool = True, impute_
 
 
 def main_script_by_stockcode(stockcode: str, target_col: str = 'quantity'):
-    if not stockcode: main_logger.error('need stockcode'); raise
+    if not stockcode: main_logger.error('need at least one stockcode'); raise
 
     etl_pipeline(stockcode=stockcode)
 

@@ -1,0 +1,5 @@
+outs:
+- md5: fe86d99936d8c766da648730cc206bf4
+  size: 457496
+  hash: md5
+  path: dfn_best_85123A.pth

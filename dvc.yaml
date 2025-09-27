@@ -1,25 +1,58 @@
 # dvc repro
 
 stages:
-  etl_pipeline:
+  etl_pipeline_full:
     # run the script
     cmd: python src/data_handling/etl_pipeline.py
 
     # dependencies necessary to run the script
     deps:
-      - src/data_handling/etl_pipeline.py    # the main etl script
-      - src/data_handling/          # all data_handling scripts
-      - src/_utils                  # all utility functions
-
-    params:
-      - params.stockcode
+      - src/data_handling/etl_pipeline.py # the main etl script
+      - src/data_handling/ # all data_handling scripts
+      - src/_utils # all utility functions
 
     # outputs
     outs:
       - data/original_df.parquet # output from the first part of the script
-      - data/processed_df.parquet  # processed dataframe
+      - data/processed_df.parquet # structured data
 
-  preprocess:
+  etl_pipeline_stockcode:
+    cmd: python src/data_handling/etl_pipeline.py --stockcode ${params.stockcode}
+
+    deps:
+      - src/data_handling/etl_pipeline.py # the main etl script
+      - src/data_handling/ # all data_handling scripts
+      - src/_utils # all utility functions
+
+    params:
+      - params.stockcode
+
+    outs:
+      - data/processed_df_${params.stockcode}.parquet
+
+  # drift_check:
+  #   cmd: >
+  #     python src/data_handling/report_data_drift.py
+  #     data/processed/processed_df.csv
+  #     data/processed_df.parquet
+  #     reports/drift_report.html
+  #     metrics/drift_metrics.json
+
+  #   deps:
+  #     - src/data_handling/report_data_drift.py
+  #     - src/_utils
+  #     - data/processed/processed_df.csv # baseline/reference data versioned with dvc
+  #     - data/processed_df.parquet # updated data (output of 'preprocess' stage)
+
+  #   plots:
+  #     - reports/drift_report.html: # dvc plots the results
+  #         cache: false # html report is large - skip caching
+
+  #   metrics:
+  #     - metrics/drift_metrics.json: # dvc tracks and versions the metrics
+  #         type: json
+
+  preprocess_full:
     cmd: >
       python src/data_handling/preprocess.py --target_col ${params.target_col} --should_scale ${params.should_scale} --verbose ${params.verbose}
 
@@ -45,3 +78,28 @@ stages:
 
       # fitted preprocessor
       - preprocessors/column_transformer.pkl
+
+  preprocess_stockcode:
+    cmd: >
+      python src/data_handling/preprocess.py --target_col ${params.target_col} --should_scale ${params.should_scale} --verbose ${params.verbose} --stockcode ${params.stockcode}
+
+    deps:
+      - src/data_handling/preprocess.py
+      - src/data_handling/
+      - src/_utils
+
+    # params from params.yaml
+    params:
+      - params.target_col
+      - params.should_scale
+      - params.verbose
+      - params.stockcode
+
+    outs:
+      # train, val, test datasets
+      - data/x_train_df_${params.stockcode}.parquet
+      - data/x_val_df_${params.stockcode}.parquet
+      - data/x_test_df_${params.stockcode}.parquet
+      - data/y_train_df_${params.stockcode}.parquet
+      - data/y_val_df_${params.stockcode}.parquet
+      - data/y_test_df_${params.stockcode}.parquet

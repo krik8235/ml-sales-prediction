@@ -15,7 +15,18 @@ tmp/
 
 tmp/
 
-models/
+dfn_bayesian/
+dfn_grid/
+dfn_best/
+en_bayesian/
+en_best/
+en_grid/
+gbm_bayesian/
+gbm_grid/
+gbm_best/
+svr_bayesian/
+svr_grid/
+svr_best/
 
 awscli-bundle/
 
@@ -23,7 +34,6 @@ awscli-bundle/
 .note
 .legacy/
 
-preprocessors/
 
 
 feature_engineering.ipynb
@@ -34,4 +44,9 @@ notebooks/
 
 .pytest_cache/
 
+reports/
+metrics/
 # .dvc/
+
+
+report_data_drift.py

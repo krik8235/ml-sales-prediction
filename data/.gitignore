@@ -1,5 +1,3 @@
-/processed_df_85123A.parquet
-/x_test_df_85123A.parquet
 /original_df.parquet
 /processed_df.parquet
 /x_train_df.parquet
@@ -8,3 +6,10 @@
 /y_train_df.parquet
 /y_val_df.parquet
 /y_test_df.parquet
+/x_train_df_85123A.parquet
+/x_val_df_85123A.parquet
+/x_test_df_85123A.parquet
+/y_train_df_85123A.parquet
+/y_val_df_85123A.parquet
+/y_test_df_85123A.parquet
+/processed_df_85123A.parquet

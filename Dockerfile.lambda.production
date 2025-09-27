@@ -1,10 +1,10 @@
 # use an official Python runtime
 FROM public.ecr.aws/lambda/python:3.12
 
-# Set environment variables
+# set environment variables
 ENV JOBLIB_MULTIPROCESSING=0
 
-# Copy requirements file and install dependencies
+# copy requirements file and install dependencies
 COPY requirements.txt ${LAMBDA_TASK_ROOT}
 RUN pip install --no-cache-dir -r requirements.txt
 

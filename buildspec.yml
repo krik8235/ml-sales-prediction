@@ -6,7 +6,6 @@ env:
     AWS_ACCOUNT_ID: "473344230259"
     ECR_REPOSITORY_NAME: my-app
     LAMBDA_FUNCTION_NAME: my-app
-    IMAGE_REPO_NAME: my-app
 
   # parameter-store:
   #   # DOCKER_REGISTRY_URL: /myapp/docker/registry/url
@@ -41,10 +40,8 @@ phases:
           echo "Using CodeBuild SHA: $CODEBUILD_RESOLVED_SOURCE_VERSION"
         fi
       - IMAGE_TAG="${COMMIT_HASH:-latest}"
-
       # store image tag in aws system manager param store (retrieve it in the deploy phase)
-      - |
-        aws ssm put-parameter --name "/my-app/image-tag" --value "$IMAGE_TAG" --type "String" --overwrite
+      - aws ssm put-parameter --name "/my-app/image-tag" --value "$IMAGE_TAG" --type "String" --overwrite
 
       # create or retrieve ecr repo
       - |
@@ -54,6 +51,7 @@ phases:
   build:
     commands:
       - echo "=== Build Phase Started ==="
+
       # build docker image
       - echo "... building the docker image ..."
       - docker build --platform linux/amd64 --provenance=false -f Dockerfile.lambda.production -t my-app:$IMAGE_TAG .
@@ -107,10 +105,10 @@ phases:
 
 artifacts:
   files:
-    - '**/*'
+    - "**/*"
   name: ml-sales-prediction-$(date +%Y-%m-%d)
 
 cache:
   paths:
-    - '/root/.cache/pip/**/*'
-    - 'node_modules/**/*'
+    - "/root/.cache/pip/**/*"
+    - "node_modules/**/*"

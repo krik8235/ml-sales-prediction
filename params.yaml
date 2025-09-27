@@ -1,5 +1,5 @@
 params:
-  stockcode: ''
-  target_col: 'quantity'
+  stockcode: "85123A"
+  target_col: "quantity"
   should_scale: True
   verbose: False

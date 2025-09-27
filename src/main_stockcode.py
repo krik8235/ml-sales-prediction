@@ -11,18 +11,17 @@ from src._utils import s3_upload, main_logger
 def main_script_stockcode(stockcode: str):
     load_dotenv(override=True)
 
+    X_train, X_val, _, y_train, y_val, _, _ = data_handling.main_script_by_stockcode(stockcode=stockcode)
+    _, checkpoint = t.main_script(X_train, X_val, y_train, y_val, should_local_save=False, n_trials=100)
+
     # file paths
     PRODUCTION_MODEL_FOLDER_PATH = os.path.join('models', 'production')
     os.makedirs(PRODUCTION_MODEL_FOLDER_PATH, exist_ok=True)
-
     DFN_FILE_PATH_STOCKCODE = os.path.join(PRODUCTION_MODEL_FOLDER_PATH, f'dfn_best_{stockcode}.pth')
 
-    X_train, X_val, _, y_train, y_val, _, _ = data_handling.main_script_by_stockcode(stockcode=stockcode)
-
-    _, checkpoint = t.main_script(X_train, X_val, y_train, y_val, should_local_save=False, n_trials=100)
+    # load
     torch.save(checkpoint, DFN_FILE_PATH_STOCKCODE)
     s3_upload(file_path=DFN_FILE_PATH_STOCKCODE)
-
 
 
 if __name__ == '__main__':

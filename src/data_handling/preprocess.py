@@ -1,3 +1,4 @@
+import os
 import argparse
 import joblib
 import pandas as pd
@@ -10,8 +11,12 @@ from src._utils import main_logger
 
 
 def preprocess(stockcode: str = '', target_col: str = 'quantity', should_scale: bool = True, verbose: bool = False):
+    # file paths
+    PROCESSED_DF_PATH = os.path.join('data', 'processed_df.parquet')
+    PREPROCESSOR_PATH = os.path.join('preprocessors', 'column_transformer.pkl')
+
     # integrate w/ dvc.yaml to extract the processed df
-    df = pd.read_parquet(f'data/processed_df_{stockcode}.parquet' if stockcode else f'data/processed_df.parquet')
+    df = pd.read_parquet(PROCESSED_DF_PATH)
 
     # categorize num and cat columns
     num_cols, cat_cols = scripts.categorize_num_cat_cols(df=df, target_col=target_col)
@@ -20,54 +25,74 @@ def preprocess(stockcode: str = '', target_col: str = 'quantity', should_scale: 
     if cat_cols:
         for col in cat_cols: df[col] = df[col].astype('string')
 
-    # creates train, val, test datasets
-    y = df[target_col]
-    X = df.copy().drop(target_col, axis='columns')
+    if not stockcode:
+        # creates train, val, test datasets
+        y = df[target_col]
+        X = df.copy().drop(target_col, axis='columns')
 
-    if X.isna().any().any(): main_logger.warning('input X has NaN'); raise Exception()
-    if X.isnull().any().any(): main_logger.warning('input X has null'); raise Exception()
-    if y.isna().any().any(): main_logger.warning('target y has NaN'); raise Exception()
-    if y.isnull().any().any(): main_logger.warning('target y has null'); raise Exception()
+        # raise error if nan or inf in datasets
+        if X.isna().any().any(): main_logger.error('input X has NaN'); raise
+        if X.isnull().any().any(): main_logger.error('input X has null'); raise
+        if y.isna().any().any(): main_logger.error('target y has NaN'); raise
+        if y.isnull().any().any(): main_logger.error('target y has null'); raise
 
-    random_state = 42
-    test_size = int(min(len(X) * 0.2, 500)) if stockcode else 50000
-    X_tv, X_test, y_tv, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
-    X_train, X_val, y_train, y_val = train_test_split(X_tv, y_tv, test_size=test_size, random_state=random_state)
+        # split
+        test_size, random_state = 50000, 42
+        X_tv, X_test, y_tv, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state, shuffle=False)
+        X_train, X_val, y_train, y_val = train_test_split(X_tv, y_tv, test_size=test_size, random_state=random_state, shuffle=False)
 
-    # store train, val, test data
-    X_train.to_parquet(f'data/x_train_df_{stockcode}.parquet' if stockcode else 'data/x_train_df.parquet', index=False)
-    X_val.to_parquet(f'data/x_val_df_{stockcode}.parquet' if stockcode else 'data/x_val_df.parquet', index=False)
-    X_test.to_parquet(f'data/x_test_df_{stockcode}.parquet' if stockcode else 'data/x_test_df.parquet', index=False)
-    y_train.to_frame(name=target_col).to_parquet(
-        f'data/y_train_df_{stockcode}.parquet' if stockcode else 'data/y_train_df.parquet',
-        index=False
-    )
-    y_val.to_frame(name=target_col).to_parquet(
-        f'data/y_val_df_{stockcode}.parquet' if stockcode else 'data/y_val_df.parquet',
-        index=False
-    )
-    y_test.to_frame(name=target_col).to_parquet(
-        f'data/y_test_df_{stockcode}.parquet' if stockcode else 'data/y_test_df.parquet',
-        index=False
-    )
+        # store train, val, test data for model training and inference
+        X_train.to_parquet('data/x_train_df.parquet', index=False)
+        X_val.to_parquet('data/x_val_df.parquet', index=False)
+        X_test.to_parquet('data/x_test_df.parquet', index=False)
+        y_train.to_frame(name=target_col).to_parquet('data/y_train_df.parquet', index=False)
+        y_val.to_frame(name=target_col).to_parquet('data/y_val_df.parquet', index=False)
+        y_test.to_frame(name=target_col).to_parquet('data/y_test_df.parquet', index=False)
 
-    # s3_upload(X_TEST_PATH) ## intentionally comment out (no longer need to store data in s3 separately)
+        # preprocess
+        X_train, X_val, X_test, preprocessor = scripts.transform_input(
+            X_train, X_val, X_test,
+            num_cols=num_cols if should_scale else [],
+            cat_cols=cat_cols
+        )
+
+        if np.isnan(X_train).any(): main_logger.error('NaNs found in scaled data'); raise
+        if np.isinf(X_train).any(): main_logger.error('Infs found in scaled data'); raise
+
+        # load trained preprocessor
+        if should_scale:
+            preprocessor.fit(X)
+            joblib.dump(preprocessor, PREPROCESSOR_PATH)
 
 
-    preprocessor = None
-    PREPROCESSOR_PATH = 'preprocessors/column_transformer.pkl'
-
-    if should_scale:
-        X_train, X_val, X_test, preprocessor = scripts.transform_input(X_train, X_val, X_test, num_cols=num_cols, cat_cols=cat_cols)
     else:
-        X_train, X_val, X_test, _ = scripts.transform_input(X_train, X_val, X_test, num_cols=[], cat_cols=cat_cols)
+        df_stockcode = pd.read_parquet(f'data/processed_df_{stockcode}.parquet')
+        y = df_stockcode[target_col]
+        X = df_stockcode.copy().drop(target_col, axis='columns')
 
-    if np.isnan(X_train).any(): main_logger.error('NaNs found in scaled data'); raise
-    if np.isinf(X_train).any(): main_logger.error('Infs found in scaled data'); raise
+        test_size, random_state =  int(min(len(X) * 0.2, 500)), 42
+        X_tv, X_test, y_tv, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state, shuffle=False)
+        X_train, X_val, y_train, y_val = train_test_split(X_tv, y_tv, test_size=test_size, random_state=random_state, shuffle=False)
 
-    if not stockcode and preprocessor is not None:
-        preprocessor.fit(X)
-        joblib.dump(preprocessor, PREPROCESSOR_PATH)
+        # store train, val, test data for model training and inference
+        X_train.to_parquet(f'data/x_train_df_{stockcode}.parquet', index=False)
+        X_val.to_parquet(f'data/x_val_df_{stockcode}.parquet', index=False)
+        X_test.to_parquet(f'data/x_test_df_{stockcode}.parquet', index=False)
+        y_train.to_frame(name=target_col).to_parquet(f'data/y_train_df_{stockcode}.parquet', index=False)
+        y_val.to_frame(name=target_col).to_parquet(f'data/y_val_df_{stockcode}.parquet', index=False)
+        y_test.to_frame(name=target_col).to_parquet(f'data/y_test_df_{stockcode}.parquet', index=False)
+
+        # preprocess
+        preprocessor = joblib.load(PREPROCESSOR_PATH)
+        X_train = preprocessor.transform(X_train)
+        X_val = preprocessor.transform(X_val)
+        X_test = preprocessor.transform(X_test)
+
+        # X_train, X_val, X_test, preprocessor = scripts.transform_input(
+        #     X_train, X_val, X_test,
+        #     num_cols=num_cols if should_scale else [],
+        #     cat_cols=cat_cols
+        # )
 
     return  X_train, X_val, X_test, y_train, y_val, y_test, preprocessor
 
@@ -85,5 +110,6 @@ if __name__ == '__main__':
     X_train, X_val, X_test, y_train, y_val, y_test, preprocessor = preprocess(
         target_col=args.target_col,
         should_scale=args.should_scale,
-        verbose=args.verbose
+        verbose=args.verbose,
+        stockcode=args.stockcode,
     )

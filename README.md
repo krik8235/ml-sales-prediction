@@ -32,7 +32,9 @@
   - [Publishing Docker image](#publishing-docker-image)
   - [Connecting cache storage](#connecting-cache-storage)
 - [Package Management](#package-management)
-- [Data CI/CD Automation with Prefect](#data-cicd-automation-with-prefect)
+- [Data CI/CD Automation](#data-cicd-automation)
+  - [Managing **DVC** Pipeline](#managing-dvc-pipeline)
+  - [Schedule run with **Prefect**](#schedule-run-with-prefect)
 - [Contributing](#contributing)
   - [Pre-commit hooks](#pre-commit-hooks)
 - [Trouble Shooting](#trouble-shooting)
@@ -240,23 +242,56 @@ uv sync
 
 <hr />
 
-## Data CI/CD Automation with Prefect
+## Data CI/CD Automation
 
-1. Run Prefect server in local
+### Managing **DVC** Pipeline
+
+- Run full DVC pipeline:
+
+```bash
+dvc repro
+dvc push
+```
+
+- Run the DVC pipeline for a specific stockcode:
+
+```bash
+dvc repro etl_pipeline_stockcode -p stockcode={STOCKCODE}
+dvc repro preprocess_stockcode -p stockcode={STOCKCODE}
+```
+
+
+- Train the model using data from the DVC pipeline:
+
+```bash
+uv run src/main_stockcode.py {STOCKCODE}
+dvc add models/production/dfn_best_{STOCKCODE}.pth
+dvc push
+
+rm models/production/dfn_best_{STOCKCODE}.pth
+```
+
+To edit the DVC pipeline, update `dvc.yaml` and `params.yaml` for parameter updates.
+
+
+
+### Schedule run with **Prefect**
+
+- Run Prefect server in local
 
 ```bash
 uv run prefect server start
 export PREFECT_API_URL="http://127.0.0.1:4200/api"
 ```
 
-2. Create Docker image
+- Deploy the weekly DVC pipeline run (from the Docker container)
 
 ```bash
-uv run src/data_handling/prefect_deploy.py
+uv run src/data_handling/prefect_flows.py
 ```
 
 
-3. Run the Prefect worker
+- Test run the Prefect worker
 
 ```bash
 # add a user group USER to the docker
@@ -266,17 +301,19 @@ prefect worker start --pool <YOUR-WORKER-POOL-NAME>
 ```
 
 
-4. Create a flow run for deployment.
+- Create a flow run for deployment.
 
 ```bash
 prefect deployment run 'etl-pipeline/deploy-etl-pipeline'
 ```
 
-You can find the dashboard at http://127.0.0.1:4200/dashboard.
+
+You can find the Prefect dashboard at http://127.0.0.1:4200/dashboard.
 
 Ref. [Prefect official documentation - deploy via Python](https://docs.prefect.io/v3/how-to-guides/deployments/deploy-via-python)
 
 <hr />
+
 
 ## Contributing
 
