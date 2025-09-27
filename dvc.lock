@@ -5,18 +5,18 @@ stages:
     deps:
     - path: src/_utils
       hash: md5
-      md5: 11f4d4a1c4ab6c08a90ddd2675b5b698.dir
-      size: 15922
+      md5: 7a0c87652406dac2d1dfa2b31ce3abf4.dir
+      size: 15816
       nfiles: 10
     - path: src/data_handling/
       hash: md5
-      md5: 9e52f8a52141d704cbeb5ab05e5d3465.dir
-      size: 95855
+      md5: e2464aff77aeafadbaacede190b9c361.dir
+      size: 95916
       nfiles: 31
     - path: src/data_handling/etl_pipeline.py
       hash: md5
-      md5: 51cd9897340600a802431e81ac9d62b8
-      size: 1863
+      md5: e7ae635652a4c6f98eae3f5dab570da9
+      size: 1862
     outs:
     - path: data/original_df.parquet
       hash: md5
@@ -31,18 +31,18 @@ stages:
     deps:
     - path: src/_utils
       hash: md5
-      md5: 11f4d4a1c4ab6c08a90ddd2675b5b698.dir
-      size: 15922
+      md5: 7a0c87652406dac2d1dfa2b31ce3abf4.dir
+      size: 15816
       nfiles: 10
     - path: src/data_handling/
       hash: md5
-      md5: 9e52f8a52141d704cbeb5ab05e5d3465.dir
-      size: 95855
+      md5: e2464aff77aeafadbaacede190b9c361.dir
+      size: 95916
       nfiles: 31
     - path: src/data_handling/etl_pipeline.py
       hash: md5
-      md5: 51cd9897340600a802431e81ac9d62b8
-      size: 1863
+      md5: e7ae635652a4c6f98eae3f5dab570da9
+      size: 1862
     params:
       params.yaml:
         params.stockcode: 85123A
@@ -57,18 +57,18 @@ stages:
     deps:
     - path: src/_utils
       hash: md5
-      md5: 11f4d4a1c4ab6c08a90ddd2675b5b698.dir
-      size: 15922
+      md5: 7a0c87652406dac2d1dfa2b31ce3abf4.dir
+      size: 15816
       nfiles: 10
     - path: src/data_handling/
       hash: md5
-      md5: 9e52f8a52141d704cbeb5ab05e5d3465.dir
-      size: 95855
+      md5: e2464aff77aeafadbaacede190b9c361.dir
+      size: 95916
       nfiles: 31
     - path: src/data_handling/preprocess.py
       hash: md5
-      md5: 564c300894adcd604f6e36591b62213e
-      size: 5253
+      md5: 0a2a7d904df55d24f0a1161e2d27c3c4
+      size: 5249
     params:
       params.yaml:
         params.should_scale: true
@@ -109,18 +109,18 @@ stages:
     deps:
     - path: src/_utils
       hash: md5
-      md5: 11f4d4a1c4ab6c08a90ddd2675b5b698.dir
-      size: 15922
+      md5: 7a0c87652406dac2d1dfa2b31ce3abf4.dir
+      size: 15816
       nfiles: 10
     - path: src/data_handling/
       hash: md5
-      md5: 9e52f8a52141d704cbeb5ab05e5d3465.dir
-      size: 95855
+      md5: e2464aff77aeafadbaacede190b9c361.dir
+      size: 95916
       nfiles: 31
     - path: src/data_handling/preprocess.py
       hash: md5
-      md5: 564c300894adcd604f6e36591b62213e
-      size: 5253
+      md5: 0a2a7d904df55d24f0a1161e2d27c3c4
+      size: 5249
     params:
       params.yaml:
         params.should_scale: true

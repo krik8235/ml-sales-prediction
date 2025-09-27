@@ -22,7 +22,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # install dvc deps
 RUN pip install --no-cache-dir dvc dvc-s3
 
-# dvc config - skip checking in github
+# dvc config - skip checking github
 RUN dvc config core.no_scm true
 
 
