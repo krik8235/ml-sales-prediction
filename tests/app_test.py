@@ -23,11 +23,9 @@ def test_hello_world(flask_client):
 @patch('torch.load')
 @patch('app._redis_client', new_callable=MagicMock)
 @patch('app.joblib.load')
-@patch('app.s3_extract_from_temp_file')
 @patch('app.s3_extract')
 def test_predict_endpoint_primary_model(
     mock_s3_extract,
-    mock_s3_extract_from_temp_file,
     mock_joblib_load,
     mock_redis_client,
     mock_torch_load,
@@ -40,7 +38,6 @@ def test_predict_endpoint_primary_model(
     mock_preprocessor = MagicMock()
     mock_joblib_load.return_value = mock_preprocessor
     mock_s3_extract.return_value = io.BytesIO(b'dummy_data')
-    mock_s3_extract_from_temp_file.return_value = 'dummy_path'
 
     # config redis cache for cache miss
     mock_redis_client.get.return_value = None
@@ -88,7 +85,6 @@ def test_predict_endpoint_primary_model(
 
 
 @patch('app.s3_extract')
-@patch('app.s3_extract_from_temp_file')
 @patch('joblib.load')
 @patch('app.get_redis_client')
 @patch('app.load_model')
@@ -98,7 +94,6 @@ def test_endpoint_backup_model(
     mock_load_model,
     mock_get_redis_client,
     mock_joblib_load,
-    mock_s3_extract_from_temp_file,
     mock_s3_extract,
     flask_client,
 ):
@@ -106,7 +101,6 @@ def test_endpoint_backup_model(
 
     # mock file io and preprocessor loading
     mock_s3_extract.return_value = io.BytesIO(b'dummy_data')
-    mock_s3_extract_from_temp_file.return_value = 'dummy_path'
     mock_preprocessor = MagicMock()
     mock_joblib_load.return_value = mock_preprocessor
 
@@ -167,11 +161,9 @@ def test_endpoint_backup_model(
 
 @patch('app._redis_client', new_callable=MagicMock)
 @patch('app.s3_extract')
-@patch('app.s3_extract_from_temp_file')
 @patch('joblib.load')
 def test_predict_endpoint_with_cache_hit(
     mock_joblib_load,
-    mock_s3_extract_from_temp_file,
     mock_s3_extract,
     mock_redis_client,
     flask_client,
@@ -179,7 +171,6 @@ def test_predict_endpoint_with_cache_hit(
     # config return vals
     mock_joblib_load.return_value = 'mock_preprocessor'
     mock_s3_extract.return_value = io.BytesIO(b'dummy_data')
-    mock_s3_extract_from_temp_file.return_value = 'dummy_path'
 
     # config the 'get' method of the global redis client (mock)
     cached_data = json.dumps([{"stockcode": "85123A", "predicted_sales": 999.9}])

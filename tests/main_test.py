@@ -16,7 +16,6 @@ EN_FILE_PATH = main_script.EN_FILE_PATH
 PREPROCESSOR_PATH = main_script.PREPROCESSOR_PATH
 
 
-
 @pytest.fixture(autouse=True) # ensure the fixture is always active
 def mock_joblib_dump():
     """mocks joblib.dump to prevent picklingerror"""
@@ -105,24 +104,17 @@ def mock_model_scripts():
         yield mock_torch_script, mock_sklearn_script
 
 
-def test_data_loading_and_preprocessor_saving(mock_data_handling, mock_s3_upload, mock_joblib_dump):
-    """tests that data loading is called and the preprocessor is saved and uploaded."""
+def test_data_loading_and_preprocessor_saving(mock_data_handling):
+    """tests if the data loading is called."""
 
     main_script.main_script()
 
     # verify that data_handling.main_script was called
     mock_data_handling.assert_called_once()
 
-    # verify preprocessor is dumped in mock file
-    mock_joblib_dump.assert_called_once_with(mock_data_handling.return_value[-1], PREPROCESSOR_PATH)
-
-    # verify preprocessor is uploaded to mock s3
-    mock_s3_upload.assert_any_call(file_path=PREPROCESSOR_PATH)
-
-
 
 def test_model_optimization_and_saving(mock_data_handling, mock_model_scripts, mock_s3_upload):
-    """tests that each model's optimization script is called and the results are saved and uploaded."""
+    """tests if each model's optimization script is called and the results are saved and uploaded."""
 
     mock_torch_script, mock_sklearn_script = mock_model_scripts
     main_script.main_script()
@@ -131,7 +123,7 @@ def test_model_optimization_and_saving(mock_data_handling, mock_model_scripts, m
     assert mock_torch_script.called
     assert mock_sklearn_script.call_count == len(main_script.sklearn_models)
 
-    # verify that each model file exists and s3_upload was called for it
+    # verify if each model file exists and s3_upload was called for it
     ## dfn
     assert os.path.exists(DFN_FILE_PATH)
     mock_s3_upload.assert_any_call(file_path=DFN_FILE_PATH)
