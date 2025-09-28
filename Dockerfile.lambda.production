@@ -3,9 +3,9 @@ FROM public.ecr.aws/lambda/python:3.12
 
 # set environment variables
 ENV JOBLIB_MULTIPROCESSING=0
-ENV DVC_HOME='/tmp/.dvc'
-ENV DVC_CACHE_DIR='/tmp/.dvc/cache'
-ENV XDG_CACHE_HOME='/tmp/.cache'
+ENV DVC_HOME="/tmp/.dvc"
+ENV DVC_CACHE_DIR="/tmp/.dvc/cache"
+ENV XDG_CACHE_HOME="/tmp/.cache"
 
 # copy requirements file and install dependencies
 COPY requirements.txt ${LAMBDA_TASK_ROOT}
@@ -17,4 +17,4 @@ RUN pip install --no-cache-dir dvc dvc-s3
 # copy the code to the lambda task root
 COPY . ${LAMBDA_TASK_ROOT}
 
-CMD ['app.handler']
+CMD [ "app.handler" ]
