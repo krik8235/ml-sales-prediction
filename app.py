@@ -72,6 +72,8 @@ CLIENT_A =  os.environ.get('CLIENT_A')
 API_ENDPOINT = os.environ.get('API_ENDPOINT')
 origins = ['http://localhost:3000', CLIENT_A, API_ENDPOINT]
 
+ENV = os.environ.get('ENV')
+
 
 # global variables
 _redis_client = None
@@ -146,7 +148,7 @@ def load_x_test():
         main_logger.info("... loading x_test ...")
 
         # use a writable directory as the repo root for dvc
-        dvc_repo_path = os.getcwd() if AWS_LAMBDA_RUNTIME_API is None else _setup_dvc_temp()
+        dvc_repo_path =  _setup_dvc_temp() if ENV == 'production' else os.getcwd()
         try:
             with dvc.api.open(X_TEST_PATH, repo=dvc_repo_path, mode='rb') as fd:
                 X_test = pd.read_parquet(fd)
@@ -173,7 +175,7 @@ def load_preprocessor():
         main_logger.info("... loading transformer ...")
         try:
             # fetch the file data from the dvc remote
-            dvc_repo_path = os.getcwd() if AWS_LAMBDA_RUNTIME_API is None else _setup_dvc_temp()
+            dvc_repo_path =  _setup_dvc_temp() if ENV == 'production' else os.getcwd()
             with dvc.api.open(PREPROCESSOR_PATH, repo=dvc_repo_path, mode='rb') as fd:
                 preprocessor = joblib.load(fd)
                 main_logger.info('✅ successfully loaded preprocessor via dvc api')
