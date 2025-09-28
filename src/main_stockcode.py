@@ -15,9 +15,7 @@ def main_script_stockcode(stockcode: str):
     _, checkpoint = t.main_script(X_train, X_val, y_train, y_val, should_local_save=False, n_trials=100)
 
     # file paths
-    PRODUCTION_MODEL_FOLDER_PATH = os.path.join('models', 'production')
-    os.makedirs(PRODUCTION_MODEL_FOLDER_PATH, exist_ok=True)
-    DFN_FILE_PATH_STOCKCODE = os.path.join(PRODUCTION_MODEL_FOLDER_PATH, f'dfn_best_{stockcode}.pth')
+    DFN_FILE_PATH_STOCKCODE = os.path.join('models', 'production', f'dfn_best_{stockcode}.pth')
 
     # load
     torch.save(checkpoint, DFN_FILE_PATH_STOCKCODE)

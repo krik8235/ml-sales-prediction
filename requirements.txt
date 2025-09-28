@@ -15,7 +15,6 @@ redis>=6.2.0
 boto3>=1.39.17
 fastparquet>=2024.11.0
 pyarrow>=21.0.0
-
-
 prefect>=3.4.19
 prefect-aws>=0.5.13
+evidently>=0.7.14

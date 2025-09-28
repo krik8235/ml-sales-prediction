@@ -102,7 +102,6 @@ def transform_target(y_train, y_val, y_test, scaler=None) -> tuple:
     return y_train_processed, y_val_processed, y_test_processed, scaler
 
 
-
 def categorize_num_cat_cols(df, target_col: str = 'quantity') -> tuple[list, list]:
     cat_cols, num_cols = list(), list()
 

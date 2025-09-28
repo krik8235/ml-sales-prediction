@@ -1,5 +1,3 @@
-# dvc repro
-
 stages:
   etl_pipeline_full:
     # run the script
@@ -30,27 +28,31 @@ stages:
     outs:
       - data/processed_df_${params.stockcode}.parquet
 
-  # drift_check:
-  #   cmd: >
-  #     python src/data_handling/report_data_drift.py
-  #     data/processed/processed_df.csv
-  #     data/processed_df.parquet
-  #     reports/drift_report.html
-  #     metrics/drift_metrics.json
+  data_drift_check: # run by stockcode
+    cmd: >
+      python src/data_handling/report_data_drift.py
+      data/processed/processed_df.csv
+      data/processed_df_${params.stockcode}.parquet
+      reports/drift_report_${params.stockcode}.html
+      metrics/drift_metrics_${params.stockcode}.json
+      ${params.stockcode}
 
-  #   deps:
-  #     - src/data_handling/report_data_drift.py
-  #     - src/_utils
-  #     - data/processed/processed_df.csv # baseline/reference data versioned with dvc
-  #     - data/processed_df.parquet # updated data (output of 'preprocess' stage)
+    params:
+      - params.stockcode
 
-  #   plots:
-  #     - reports/drift_report.html: # dvc plots the results
-  #         cache: false # html report is large - skip caching
+    deps:
+      - src/data_handling/report_data_drift.py
+      - src/data_handling/scripts/
+      - src/_utils/
+      - data/
 
-  #   metrics:
-  #     - metrics/drift_metrics.json: # dvc tracks and versions the metrics
-  #         type: json
+    plots:
+      - reports/drift_report_${params.stockcode}.html: # dvc plots the results
+          cache: false # html report is large - skip caching
+
+    metrics:
+      - metrics/drift_metrics_${params.stockcode}.json: # dvc tracks and versions the metrics
+          type: json
 
   preprocess_full:
     cmd: >

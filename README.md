@@ -281,6 +281,10 @@ To edit the DVC pipeline, update `dvc.yaml` and `params.yaml` for parameter upda
 
 ```bash
 uv run prefect server start
+```
+
+
+```bash
 export PREFECT_API_URL="http://127.0.0.1:4200/api"
 ```
 

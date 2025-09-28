@@ -28,6 +28,7 @@ dependencies = [
     "pyarrow>=21.0.0",
     "prefect-aws>=0.5.13",
     "prefect>=3.4.19",
+    "evidently>=0.7.14",
 ]
 
 [project.urls]

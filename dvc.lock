@@ -10,8 +10,8 @@ stages:
       nfiles: 10
     - path: src/data_handling/
       hash: md5
-      md5: e2464aff77aeafadbaacede190b9c361.dir
-      size: 95916
+      md5: 5c7503f116d719e73d7598068782e3c4.dir
+      size: 96986
       nfiles: 31
     - path: src/data_handling/etl_pipeline.py
       hash: md5
@@ -36,8 +36,8 @@ stages:
       nfiles: 10
     - path: src/data_handling/
       hash: md5
-      md5: e2464aff77aeafadbaacede190b9c361.dir
-      size: 95916
+      md5: 5c7503f116d719e73d7598068782e3c4.dir
+      size: 96986
       nfiles: 31
     - path: src/data_handling/etl_pipeline.py
       hash: md5
@@ -62,8 +62,8 @@ stages:
       nfiles: 10
     - path: src/data_handling/
       hash: md5
-      md5: e2464aff77aeafadbaacede190b9c361.dir
-      size: 95916
+      md5: 5c7503f116d719e73d7598068782e3c4.dir
+      size: 96986
       nfiles: 31
     - path: src/data_handling/preprocess.py
       hash: md5
@@ -114,8 +114,8 @@ stages:
       nfiles: 10
     - path: src/data_handling/
       hash: md5
-      md5: e2464aff77aeafadbaacede190b9c361.dir
-      size: 95916
+      md5: 5c7503f116d719e73d7598068782e3c4.dir
+      size: 96986
       nfiles: 31
     - path: src/data_handling/preprocess.py
       hash: md5
@@ -152,3 +152,39 @@ stages:
       hash: md5
       md5: aa5b9af629d06b0d61dd5bd5fa6b04f7
       size: 1630
+  drift_check:
+    cmd: "python src/data_handling/report_data_drift.py data/processed/processed_df.csv
+      data/processed_df_85123A.parquet reports/drift_report_85123A.html metrics/drift_metrics_85123A.json
+      85123A\n"
+    deps:
+    - path: data/
+      hash: md5
+      md5: 8eb53d6ad9d6c3d3fc9a714517acd032.dir
+      size: 149348107
+      nfiles: 22
+    - path: src/_utils/
+      hash: md5
+      md5: 7a0c87652406dac2d1dfa2b31ce3abf4.dir
+      size: 15816
+      nfiles: 10
+    - path: src/data_handling/report_data_drift.py
+      hash: md5
+      md5: dcbe0645380674b6a1edddaa0254f6d9
+      size: 2790
+    - path: src/data_handling/scripts/
+      hash: md5
+      md5: 5286620867e02f604a607584e373050e.dir
+      size: 54458
+      nfiles: 16
+    params:
+      params.yaml:
+        params.stockcode: 85123A
+    outs:
+    - path: metrics/drift_metrics_85123A.json
+      hash: md5
+      md5: 8bf15b0c45773afe80b1dc454b3009ac
+      size: 80
+    - path: reports/drift_report_85123A.html
+      hash: md5
+      md5: b67457dc0e49ed5a39c26ca3b5a0be62
+      size: 4557812
