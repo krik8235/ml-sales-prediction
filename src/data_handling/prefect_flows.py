@@ -15,7 +15,6 @@ from src._utils import main_logger
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
-
 @task(retries=3, retry_delay_seconds=30)
 def run_dvc_etl_pipeline():
     """prefect task to run dvc pipeline defined in the dvc.yaml file"""
@@ -40,8 +39,8 @@ if __name__ == '__main__':
     load_dotenv(override=True)
     ENV = os.getenv('ENV', 'production')
     DOCKER_HUB_REPO = os.getenv('DOCKER_HUB_REPO')
-    S3_BUCKET_FOR_PREFECT_PATH = os.getenv('S3_BUCKET_FOR_PREFECT_PATH')
-    image_repo = f'{DOCKER_HUB_REPO}:ml-sales-pred-data-latest' if ENV == 'local' else f'{S3_BUCKET_FOR_PREFECT_PATH}:latest'
+    ECR_FOR_PREFECT_PATH = os.getenv('ECR_FOR_PREFECT_PATH')
+    image_repo = f'{DOCKER_HUB_REPO}:ml-sales-pred-data-latest' if ENV == 'local' else f'{ECR_FOR_PREFECT_PATH}:latest'
 
     weekly_schedule = Schedule(
         interval=timedelta(weeks=1),

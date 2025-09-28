@@ -35,6 +35,7 @@
 - [Data CI/CD Automation](#data-cicd-automation)
   - [Managing **DVC** Pipeline](#managing-dvc-pipeline)
   - [Schedule run with **Prefect**](#schedule-run-with-prefect)
+  - [EventlyAI Reports](#eventlyai-reports)
 - [Contributing](#contributing)
   - [Pre-commit hooks](#pre-commit-hooks)
 - [Trouble Shooting](#trouble-shooting)
@@ -315,6 +316,12 @@ prefect deployment run 'etl-pipeline/deploy-etl-pipeline'
 You can find the Prefect dashboard at http://127.0.0.1:4200/dashboard.
 
 Ref. [Prefect official documentation - deploy via Python](https://docs.prefect.io/v3/how-to-guides/deployments/deploy-via-python)
+
+
+### EventlyAI Reports
+
+- [Report](https://app.evidently.cloud/v2/projects/01998e47-e3d7-7ee7-ae5e-b6fdf3f80fff/reports)
+
 
 <hr />
 
