@@ -313,9 +313,10 @@ prefect deployment run 'etl-pipeline/deploy-etl-pipeline'
 ```
 
 
-You can find the Prefect dashboard at http://127.0.0.1:4200/dashboard.
+Ref.
 
-Ref. [Prefect official documentation - deploy via Python](https://docs.prefect.io/v3/how-to-guides/deployments/deploy-via-python)
+- Prefect dashboard: http://127.0.0.1:4200/dashboard.
+- [Prefect official documentation - deploy via Python](https://docs.prefect.io/v3/how-to-guides/deployments/deploy-via-python)
 
 
 ### EventlyAI Reports

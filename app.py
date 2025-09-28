@@ -18,8 +18,10 @@ from flask import Flask, request, jsonify
 from flask_cors import cross_origin
 from waitress import serve
 from dotenv import load_dotenv
+import shutil
 import dvc.api
 from dvc.exceptions import DvcException
+
 
 import src.model.torch_model as t
 import src.data_handling as data_handling
@@ -82,6 +84,21 @@ device_type = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.m
 device = torch.device(device_type)
 
 
+
+# helper to ensure dvc uses /tmp
+def _setup_dvc_temp():
+    dvc_home = os.environ.get('DVC_HOME', '/tmp/.dvc')
+    if not os.path.exists(dvc_home):
+        os.makedirs(dvc_home)
+
+    # clean up any existing dvc config from a previous cold start to avoid stale states
+    if os.path.exists(os.path.join(dvc_home, 'config')):
+        shutil.rmtree(dvc_home)
+        os.makedirs(dvc_home)
+
+    return dvc_home
+
+
 def get_redis_client():
     global _redis_client
 
@@ -128,8 +145,11 @@ def load_x_test():
     global X_test
     if not os.environ.get('PYTEST_RUN', False):
         main_logger.info("... loading x_test ...")
+
+        # use a writable directory as the repo root for dvc
+        dvc_repo_path = os.getcwd() if AWS_LAMBDA_RUNTIME_API is None else _setup_dvc_temp()
         try:
-            with dvc.api.open(X_TEST_PATH, repo=os.getcwd(), mode='rb') as fd:
+            with dvc.api.open(X_TEST_PATH, repo=dvc_repo_path, mode='rb') as fd:
                 X_test = pd.read_parquet(fd)
                 main_logger.info('✅ successfully loaded x_test via dvc api')
 
@@ -154,7 +174,8 @@ def load_preprocessor():
         main_logger.info("... loading transformer ...")
         try:
             # fetch the file data from the dvc remote
-            with dvc.api.open(PREPROCESSOR_PATH, repo=os.getcwd(), mode='rb') as fd:
+            dvc_repo_path = os.getcwd() if AWS_LAMBDA_RUNTIME_API is None else _setup_dvc_temp()
+            with dvc.api.open(PREPROCESSOR_PATH, repo=dvc_repo_path, mode='rb') as fd:
                 preprocessor = joblib.load(fd)
                 main_logger.info('✅ successfully loaded preprocessor via dvc api')
 
