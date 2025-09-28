@@ -87,16 +87,15 @@ device = torch.device(device_type)
 
 # helper to ensure dvc uses /tmp
 def _setup_dvc_temp():
-    dvc_home = os.environ.get('DVC_HOME', '/tmp/.dvc')
-    if not os.path.exists(dvc_home):
-        os.makedirs(dvc_home)
+    DVC_HOME = os.environ.get('DVC_HOME', '/tmp/.dvc')
+    os.makedirs(DVC_HOME, exist_ok=True)
 
     # clean up any existing dvc config from a previous cold start to avoid stale states
-    if os.path.exists(os.path.join(dvc_home, 'config')):
-        shutil.rmtree(dvc_home)
-        os.makedirs(dvc_home)
+    if os.path.exists(os.path.join(DVC_HOME, 'config')):
+        shutil.rmtree(DVC_HOME)
+        os.makedirs(DVC_HOME)
 
-    return os.path.dirname(dvc_home)
+    return os.path.dirname(DVC_HOME)
 
 
 def get_redis_client():
@@ -313,161 +312,161 @@ def hello_world():
 def predict_price(stockcode):
     df_stockcode = None
 
-    # try:
-    main_logger.info('... start to predict ...')
+    try:
+        main_logger.info('... start to predict ...')
 
-    data = request.args.to_dict() # can incl. country, unitprice_min, unitprice_max, customerid, num_price_bins
-    stockcode = stockcode if stockcode else data.get('stockcode', '85123A') if data is not None else '85123A'
-    main_logger.info(f'predicting for stockcode: {stockcode}')
-    main_logger.info(f'query parameters: {data}')
+        data = request.args.to_dict() # can incl. country, unitprice_min, unitprice_max, customerid, num_price_bins
+        stockcode = stockcode if stockcode else data.get('stockcode', '85123A') if data is not None else '85123A'
+        main_logger.info(f'predicting for stockcode: {stockcode}')
+        main_logger.info(f'query parameters: {data}')
 
-    # define cache key for df_stockcode
-    cache_key_df_stockcode, file_path_df_stockcode = data_handling.scripts.fetch_imputation_cache_key_and_file_path(stockcode=stockcode)
-    hash_data_st = { 'stockcode': stockcode  }
-    params_hash_st = hashlib.sha256(str(sorted(hash_data_st.items())).encode()).hexdigest()
-    cache_key_df_stockcode = f'{cache_key_df_stockcode}:{params_hash_st}'
+        # define cache key for df_stockcode
+        cache_key_df_stockcode, file_path_df_stockcode = data_handling.scripts.fetch_imputation_cache_key_and_file_path(stockcode=stockcode)
+        hash_data_st = { 'stockcode': stockcode  }
+        params_hash_st = hashlib.sha256(str(sorted(hash_data_st.items())).encode()).hexdigest()
+        cache_key_df_stockcode = f'{cache_key_df_stockcode}:{params_hash_st}'
 
-    # define cache key for prediction
-    hash_data = { 'stockcode': stockcode, **data }
-    params_hash = hashlib.sha256(str(sorted(hash_data.items())).encode()).hexdigest()
-    cache_key_prediction_result_by_stockcode = f"prediction:{{{stockcode}}}:{params_hash}"
+        # define cache key for prediction
+        hash_data = { 'stockcode': stockcode, **data }
+        params_hash = hashlib.sha256(str(sorted(hash_data.items())).encode()).hexdigest()
+        cache_key_prediction_result_by_stockcode = f"prediction:{{{stockcode}}}:{params_hash}"
 
-    # fetch cache
-    if _redis_client is not None:
-        # prediction results
-        cached_prediction_result = _redis_client.get(cache_key_prediction_result_by_stockcode)
-        if cached_prediction_result:
-            main_logger.info(f"cached prediction hit for stockcode: {stockcode}")
-            try: return jsonify(json.loads(cached_prediction_result)) # type: ignore
-            except: return jsonify(json.loads(json.dumps(cached_prediction_result)))
+        # fetch cache
+        if _redis_client is not None:
+            # prediction results
+            cached_prediction_result = _redis_client.get(cache_key_prediction_result_by_stockcode)
+            if cached_prediction_result:
+                main_logger.info(f"cached prediction hit for stockcode: {stockcode}")
+                try: return jsonify(json.loads(cached_prediction_result)) # type: ignore
+                except: return jsonify(json.loads(json.dumps(cached_prediction_result)))
 
-        # load historical data of the product (stockcode)
-        cached_df_stockcode = _redis_client.get(cache_key_df_stockcode)
-        if cached_df_stockcode: df_stockcode = json.loads(json.dumps(cached_df_stockcode))
+            # load historical data of the product (stockcode)
+            cached_df_stockcode = _redis_client.get(cache_key_df_stockcode)
+            if cached_df_stockcode: df_stockcode = json.loads(json.dumps(cached_df_stockcode))
 
-    if df_stockcode is None:
-        df_stockcode_bites_io = s3_extract(file_path=file_path_df_stockcode[1:] if file_path_df_stockcode[0] == '/' else file_path_df_stockcode)
-        if df_stockcode_bites_io: df_stockcode = pd.read_parquet(df_stockcode_bites_io)
+        if df_stockcode is None:
+            df_stockcode_bites_io = s3_extract(file_path=file_path_df_stockcode[1:] if file_path_df_stockcode[0] == '/' else file_path_df_stockcode)
+            if df_stockcode_bites_io: df_stockcode = pd.read_parquet(df_stockcode_bites_io)
 
-    # define the price range
-    min_price = float(data.get('unitprice_min', 0.0))
-    max_price = float(data.get('unitprice_max', 0.0))
+        # define the price range
+        min_price = float(data.get('unitprice_min', 0.0))
+        max_price = float(data.get('unitprice_max', 0.0))
 
-    if min_price == 0.0:
-        if df_stockcode is not None and not df_stockcode.empty:
-            min_price = df_stockcode['unitprice_min'][0]
-            if min_price < 0.1: min_price = df_stockcode['unitprice_median'][0] # type: ignore
-        else:
-            min_price = 2.0
+        if min_price == 0.0:
+            if df_stockcode is not None and not df_stockcode.empty:
+                min_price = df_stockcode['unitprice_min'][0]
+                if min_price < 0.1: min_price = df_stockcode['unitprice_median'][0] # type: ignore
+            else:
+                min_price = 2.0
 
-    if max_price == 0.0:
-        if df_stockcode is not None and not df_stockcode.empty:
-            max_price = df_stockcode['unitprice_max'][0]
-        else:
-            max_price = 20.0
+        if max_price == 0.0:
+            if df_stockcode is not None and not df_stockcode.empty:
+                max_price = df_stockcode['unitprice_max'][0]
+            else:
+                max_price = 20.0
 
-    if min_price == max_price:
-        min_price = max(2, min_price * 0.9)
-        max_price = max_price * 1.5 + 0.1
-    elif min_price > max_price:
-        min_price, max_price = max_price, min_price
+        if min_price == max_price:
+            min_price = max(2, min_price * 0.9)
+            max_price = max_price * 1.5 + 0.1
+        elif min_price > max_price:
+            min_price, max_price = max_price, min_price
 
-    if min_price > 1:
-        min_price = math.floor(min_price)
+        if min_price > 1:
+            min_price = math.floor(min_price)
 
-    if not 'unitprice_max' in data and max_price - min_price < 10.0:
-        max_price = max_price * 5
+        if not 'unitprice_max' in data and max_price - min_price < 10.0:
+            max_price = max_price * 5
 
 
-    NUM_PRICE_BINS = int(data.get('num_price_bins', 100))
-    price_range = np.linspace(min_price, max_price, NUM_PRICE_BINS)
-    main_logger.info(f'price range for stockcode {stockcode}: ${min_price} - ${max_price}')
+        NUM_PRICE_BINS = int(data.get('num_price_bins', 100))
+        price_range = np.linspace(min_price, max_price, NUM_PRICE_BINS)
+        main_logger.info(f'price range for stockcode {stockcode}: ${min_price} - ${max_price}')
 
-    if X_test is not None:
-        # create df
-        price_range_df = pd.DataFrame({ 'unitprice': price_range })
-        test_sample = X_test.sample(n=1200, random_state=42, ignore_index=True) # type: ignore
-        test_sample_merged = test_sample.merge(price_range_df, how='cross') if X_test is not None else price_range_df
-        test_sample_merged.drop('unitprice_x', axis=1, inplace=True)
-        test_sample_merged.rename(columns={'unitprice_y': 'unitprice'}, inplace=True)
+        if X_test is not None:
+            # create df
+            price_range_df = pd.DataFrame({ 'unitprice': price_range })
+            test_sample = X_test.sample(n=1200, random_state=42, ignore_index=True) # type: ignore
+            test_sample_merged = test_sample.merge(price_range_df, how='cross') if X_test is not None else price_range_df
+            test_sample_merged.drop('unitprice_x', axis=1, inplace=True)
+            test_sample_merged.rename(columns={'unitprice_y': 'unitprice'}, inplace=True)
 
-        X = preprocessor.transform(test_sample_merged) if preprocessor else test_sample_merged
+            X = preprocessor.transform(test_sample_merged) if preprocessor else test_sample_merged
 
-        # load model
-        try: load_model(stockcode=stockcode)
-        except: pass
+            # load model
+            try: load_model(stockcode=stockcode)
+            except: pass
 
-        # perform inference
-        y_pred_actual = None
-        epsilon = 0
-        if model:
-            input_tensor = torch.tensor(X, dtype=torch.float32)
-            model.eval()
-            with torch.inference_mode():
-                y_pred = model(input_tensor)
-                y_pred = y_pred.cpu().numpy().flatten()
+            # perform inference
+            y_pred_actual = None
+            epsilon = 0
+            if model:
+                input_tensor = torch.tensor(X, dtype=torch.float32)
+                model.eval()
+                with torch.inference_mode():
+                    y_pred = model(input_tensor)
+                    y_pred = y_pred.cpu().numpy().flatten()
+                    y_pred_actual = np.exp(y_pred + epsilon)
+                    main_logger.info(f"primary model's prediction for stockcode {stockcode} - actual quantity {y_pred_actual[0:5]}")
+
+                    if np.isinf(y_pred_actual).any() or (y_pred_actual == 0.0).any() or y_pred_actual is None: # type: ignore
+                        if backup_model:
+                            y_pred = backup_model.predict(X)
+                            y_pred_actual = np.exp(y_pred + epsilon)
+                            main_logger.info(f"backup model's prediction for stockcode {stockcode} - actual quantity {y_pred_actual[0:5]}")
+
+            elif backup_model:
+                try: input_dim = len(backup_model.feature_name_)
+                except: input_dim = len(backup_model.coef_)
+                if X.shape[1] > input_dim: X = X[:, : X.shape[1] - input_dim]
+                y_pred = backup_model.predict(X)
                 y_pred_actual = np.exp(y_pred + epsilon)
-                main_logger.info(f"primary model's prediction for stockcode {stockcode} - actual quantity {y_pred_actual[0:5]}")
+                main_logger.info(f"backup model's prediction for stockcode {stockcode} -  actual quantity {y_pred_actual[0:5]}")
 
-                if np.isinf(y_pred_actual).any() or (y_pred_actual == 0.0).any() or y_pred_actual is None: # type: ignore
-                    if backup_model:
-                        y_pred = backup_model.predict(X)
-                        y_pred_actual = np.exp(y_pred + epsilon)
-                        main_logger.info(f"backup model's prediction for stockcode {stockcode} - actual quantity {y_pred_actual[0:5]}")
+            if y_pred_actual is not None:
+                df_ = test_sample_merged.copy()
+                df_['quantity'] = np.floor(y_pred_actual * 100)
+                df_['sales'] = df_['quantity'] * df_['unitprice']
+                df_ = df_.sort_values(by='unitprice')
 
-        elif backup_model:
-            try: input_dim = len(backup_model.feature_name_)
-            except: input_dim = len(backup_model.coef_)
-            if X.shape[1] > input_dim: X = X[:, : X.shape[1] - input_dim]
-            y_pred = backup_model.predict(X)
-            y_pred_actual = np.exp(y_pred + epsilon)
-            main_logger.info(f"backup model's prediction for stockcode {stockcode} -  actual quantity {y_pred_actual[0:5]}")
+                df_results = df_.groupby('unitprice').agg(
+                    quantity=('quantity', 'mean'),
+                    quantity_min=('quantity', 'min'),
+                    quantity_max=('quantity', 'max'),
+                    sales=('sales', 'mean'),
+                ).reset_index()
 
-        if y_pred_actual is not None:
-            df_ = test_sample_merged.copy()
-            df_['quantity'] = np.floor(y_pred_actual * 100)
-            df_['sales'] = df_['quantity'] * df_['unitprice']
-            df_ = df_.sort_values(by='unitprice')
+                optimal_row = df_results.loc[df_results['sales'].idxmax()]
+                optimal_price = optimal_row['unitprice']
+                optimal_quantity = optimal_row['quantity']
+                best_sales = optimal_row['sales']
 
-            df_results = df_.groupby('unitprice').agg(
-                quantity=('quantity', 'mean'),
-                quantity_min=('quantity', 'min'),
-                quantity_max=('quantity', 'max'),
-                sales=('sales', 'mean'),
-            ).reset_index()
+                all_outputs = []
+                for _, row in df_results.iterrows():
+                    current_output = {
+                        "stockcode": stockcode,
+                        "unit_price": float(row['unitprice']),
+                        'quantity': int(row['quantity']),
+                        'quantity_min': int(row['quantity_min']),
+                        'quantity_max': int(row['quantity_max']),
+                        "predicted_sales": float(row['sales']),
+                        "optimal_unit_price": float(optimal_price), # type: ignore
+                        "max_predicted_sales": float(best_sales), # type: ignore
+                    }
+                    all_outputs.append(current_output)
 
-            optimal_row = df_results.loc[df_results['sales'].idxmax()]
-            optimal_price = optimal_row['unitprice']
-            optimal_quantity = optimal_row['quantity']
-            best_sales = optimal_row['sales']
+                # store the prediction results in cache
+                if all_outputs and _redis_client is not None:
+                    serialized_data = json.dumps(all_outputs)
+                    _redis_client.set(cache_key_prediction_result_by_stockcode, serialized_data, ex=3600) # expire in an hour
 
-            all_outputs = []
-            for _, row in df_results.iterrows():
-                current_output = {
-                    "stockcode": stockcode,
-                    "unit_price": float(row['unitprice']),
-                    'quantity': int(row['quantity']),
-                    'quantity_min': int(row['quantity_min']),
-                    'quantity_max': int(row['quantity_max']),
-                    "predicted_sales": float(row['sales']),
-                    "optimal_unit_price": float(optimal_price), # type: ignore
-                    "max_predicted_sales": float(best_sales), # type: ignore
-                }
-                all_outputs.append(current_output)
+                main_logger.info(f'optimal price: $ {optimal_price:,.2f}, quantity: {optimal_quantity:,.0f}, maximum sales: $ {best_sales:,.2f}')
+                return jsonify(all_outputs)
 
-            # store the prediction results in cache
-            if all_outputs and _redis_client is not None:
-                serialized_data = json.dumps(all_outputs)
-                _redis_client.set(cache_key_prediction_result_by_stockcode, serialized_data, ex=3600) # expire in an hour
+            return jsonify([])
 
-            main_logger.info(f'optimal price: $ {optimal_price:,.2f}, quantity: {optimal_quantity:,.0f}, maximum sales: $ {best_sales:,.2f}')
-            return jsonify(all_outputs)
-
+    except Exception as e:
+        main_logger.error(f'error: {e}')
         return jsonify([])
-
-    # except Exception as e:
-    #     main_logger.error(f'error: {e}')
-    #     return jsonify([])
 
 
 # sagemaker's standard endpoint
