@@ -96,7 +96,7 @@ def _setup_dvc_temp():
         shutil.rmtree(dvc_home)
         os.makedirs(dvc_home)
 
-    return dvc_home
+    return os.path.dirname(dvc_home)
 
 
 def get_redis_client():
