@@ -317,7 +317,7 @@ def load_artifacts_backup_model():
 # api endpoints
 @app.route('/')
 def hello_world():
-    if ENV == 'local': return """<p>Hello, world</p><p>I am an API endpoint.</p>"""
+    if os.environ.get('ENV') == 'local': return """<p>Hello, world</p><p>I am an API endpoint.</p>"""
 
     data = request.json if request.is_json else request.data.decode('utf-8')
     main_logger.info(f"request received! ENV: {ENV}, Data: {data}")
