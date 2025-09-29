@@ -30,7 +30,7 @@ uv.lock
 .github/
 
 
-.dvc/cache
+.dvc/cache/
 .dvcignore
 
 reports/
