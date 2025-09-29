@@ -133,6 +133,19 @@ DVC_REMOTE_URL = os.environ.get('DVC_REMOTE_URL_ENV', 's3://ml-sales-pred/dvc')
 DVC_TMP_DIR = '/tmp'
 
 
+def configure_dvc_for_lambda():
+    # set dvc directories to /tmp
+    os.environ.update({
+        'DVC_CACHE_DIR': '/tmp/dvc-cache',
+        'DVC_DATA_DIR': '/tmp/dvc-data',
+        'DVC_CONFIG_DIR': '/tmp/dvc-config',
+        'DVC_GLOBAL_CONFIG_DIR': '/tmp/dvc-global-config',
+        'DVC_SITE_CACHE_DIR': '/tmp/dvc-site-cache'
+    })
+    for dir_path in ['/tmp/dvc-cache', '/tmp/dvc-data', '/tmp/dvc-config']:
+        os.makedirs(dir_path, exist_ok=True)
+
+
 def load_x_test():
     global X_test
     if not os.environ.get('PYTEST_RUN', False):
@@ -154,6 +167,7 @@ def load_preprocessor():
     global preprocessor
     if not os.environ.get('PYTEST_RUN', False):
         main_logger.info("... loading preprocessor ...")
+        configure_dvc_for_lambda()
         try:
             with dvc.api.open(PREPROCESSOR_PATH, remote=DVC_REMOTE_NAME, mode='rb') as fd:
                 preprocessor = joblib.load(fd)
