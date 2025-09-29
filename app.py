@@ -145,6 +145,11 @@ def load_x_test():
     if not os.environ.get('PYTEST_RUN', False):
         main_logger.info("... loading x_test ...")
 
+        import subprocess
+        main_logger.info(f"... explicitly pulling {X_TEST_PATH} to /tmp cache ...")
+        subprocess.check_call(["dvc", "pull", X_TEST_PATH])
+        main_logger.info(f"✅ dvc pull successful")
+
         # use a writable directory as the repo root for dvc
         # dvc_repo_path =  _setup_dvc_temp() if ENV == 'production' else os.getcwd()
         try:
@@ -172,6 +177,11 @@ def load_preprocessor():
     if not os.environ.get('PYTEST_RUN', False):
         main_logger.info("... loading transformer ...")
         try:
+            import subprocess
+            main_logger.info(f"... explicitly pulling {PREPROCESSOR_PATH} to /tmp cache ...")
+            subprocess.check_call(["dvc", "pull", PREPROCESSOR_PATH])
+            main_logger.info(f"✅ dvc pull successful")
+
             # fetch the file data from the dvc remote
             # dvc_repo_path =  _setup_dvc_temp() if ENV == 'production' else os.getcwd()
             with dvc.api.open(PREPROCESSOR_PATH, mode='rb') as fd:

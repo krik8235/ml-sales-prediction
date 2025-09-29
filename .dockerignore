@@ -1,6 +1,7 @@
 .ruff_cache/
 .DS_Store/
 dist/
+__pycache__/
 
 .vscode
 *.psd
@@ -9,16 +10,14 @@ dist/
 *.csv
 [a-f]*.log
 
+tests/
 .pytest_cache/
 pytest.ini
-__pycache__/
 
 .legacy/
 .venv/
 awscli-bundle/
 notebooks/
-
-tests/
 
 tmp/
 
