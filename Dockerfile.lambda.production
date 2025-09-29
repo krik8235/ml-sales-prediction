@@ -13,7 +13,11 @@ COPY requirements.txt ${LAMBDA_TASK_ROOT}
 RUN python -m pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install --no-cache-dir dvc dvc-s3
+
+# dvc
+RUN dvc init --no-scm
 RUN dvc config core.no_scm true
+
 
 # copy the code to the lambda task root
 COPY . ${LAMBDA_TASK_ROOT}
