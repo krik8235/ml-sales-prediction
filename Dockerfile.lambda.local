@@ -17,6 +17,7 @@ COPY dvc.yaml /app/
 COPY . /app/
 
 # install deps
+RUN python -m pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
 # install dvc deps

@@ -72,8 +72,6 @@ CLIENT_A =  os.environ.get('CLIENT_A')
 API_ENDPOINT = os.environ.get('API_ENDPOINT')
 origins = ['http://localhost:3000', CLIENT_A, API_ENDPOINT]
 
-ENV = os.environ.get('ENV')
-
 
 # global variables
 _redis_client = None
@@ -87,17 +85,17 @@ device = torch.device(device_type)
 
 
 
-# helper to ensure dvc uses /tmp
-def _setup_dvc_temp():
-    DVC_HOME = os.environ.get('DVC_HOME', '/tmp/.dvc')
-    os.makedirs(DVC_HOME, exist_ok=True)
+# # helper to ensure dvc uses /tmp
+# def _setup_dvc_temp():
+#     DVC_HOME = os.environ.get('DVC_HOME', '/tmp/.dvc')
+#     os.makedirs(DVC_HOME, exist_ok=True)
 
-    # clean up any existing dvc config from a previous cold start to avoid stale states
-    if os.path.exists(os.path.join(DVC_HOME, 'config')):
-        shutil.rmtree(DVC_HOME)
-        os.makedirs(DVC_HOME)
+#     # clean up any existing dvc config from a previous cold start to avoid stale states
+#     if os.path.exists(os.path.join(DVC_HOME, 'config')):
+#         shutil.rmtree(DVC_HOME)
+#         os.makedirs(DVC_HOME)
 
-    return os.path.dirname(DVC_HOME)
+#     return os.path.dirname(DVC_HOME)
 
 
 def get_redis_client():
@@ -148,9 +146,9 @@ def load_x_test():
         main_logger.info("... loading x_test ...")
 
         # use a writable directory as the repo root for dvc
-        dvc_repo_path =  _setup_dvc_temp() if ENV == 'production' else os.getcwd()
+        # dvc_repo_path =  _setup_dvc_temp() if ENV == 'production' else os.getcwd()
         try:
-            with dvc.api.open(X_TEST_PATH, repo=dvc_repo_path, mode='rb') as fd:
+            with dvc.api.open(X_TEST_PATH, mode='rb') as fd:
                 X_test = pd.read_parquet(fd)
                 main_logger.info('✅ successfully loaded x_test via dvc api')
 
@@ -175,8 +173,8 @@ def load_preprocessor():
         main_logger.info("... loading transformer ...")
         try:
             # fetch the file data from the dvc remote
-            dvc_repo_path =  _setup_dvc_temp() if ENV == 'production' else os.getcwd()
-            with dvc.api.open(PREPROCESSOR_PATH, repo=dvc_repo_path, mode='rb') as fd:
+            # dvc_repo_path =  _setup_dvc_temp() if ENV == 'production' else os.getcwd()
+            with dvc.api.open(PREPROCESSOR_PATH, mode='rb') as fd:
                 preprocessor = joblib.load(fd)
                 main_logger.info('✅ successfully loaded preprocessor via dvc api')
 

@@ -11,6 +11,7 @@ ENV DVC_NO_SITE_CACHE="true"
 
 # copy requirements file and install dependencies
 COPY requirements.txt ${LAMBDA_TASK_ROOT}
+RUN python -m pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install --no-cache-dir dvc dvc-s3
 
