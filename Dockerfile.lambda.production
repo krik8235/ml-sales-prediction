@@ -5,7 +5,7 @@ FROM public.ecr.aws/lambda/python:3.12
 ENV JOBLIB_MULTIPROCESSING=0
 ENV DVC_HOME="/tmp/.dvc"
 ENV DVC_CACHE_DIR="/tmp/.dvc/cache"
-ENV DVC_REMOTE="ml-sales-pred"
+ENV DVC_REMOTE_NAME="storage"
 ENV DVC_GLOBAL_SITE_CACHE_DIR="/tmp/dvc_global"
 
 # copy requirements file and install dependencies

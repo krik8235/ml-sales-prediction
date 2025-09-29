@@ -35,6 +35,8 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 AWS_LAMBDA_RUNTIME_API = os.environ.get('AWS_LAMBDA_RUNTIME_API', None)
 if AWS_LAMBDA_RUNTIME_API is None: load_dotenv(override=True)
 
+ENV = os.environ.get('ENV', 'production')
+
 
 # file path
 DFN_FILE_PATH = os.path.join('models', 'production', 'dfn_best.pth')
@@ -45,6 +47,8 @@ EN_FILE_PATH = os.path.join('models', 'production', 'en_best.pth')
 PREPROCESSOR_PATH = os.path.join('preprocessors', 'column_transformer.pkl')
 ORIGINAL_DF_PATH = os.environ.get('ORIGINAL_DF_PATH')
 X_TEST_PATH = os.environ.get('X_TEST', 'data/x_test_df.parquet')
+
+DVC_REMOTE_NAME = 'storage'
 
 # s3 boto client
 S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'ml-sales-pred')
@@ -145,17 +149,23 @@ def load_x_test():
     if not os.environ.get('PYTEST_RUN', False):
         main_logger.info("... loading x_test ...")
 
-        import subprocess
-        main_logger.info(f"... explicitly pulling {X_TEST_PATH} to /tmp cache ...")
-        subprocess.check_call(["dvc", "pull", X_TEST_PATH])
-        main_logger.info(f"✅ dvc pull successful")
+        # import subprocess
+        # main_logger.info(f"... explicitly pulling {X_TEST_PATH} to /tmp cache ...")
+        # subprocess.check_call(["dvc", "pull", X_TEST_PATH])
+        # main_logger.info(f"✅ dvc pull successful")
 
         # use a writable directory as the repo root for dvc
+        # remote=DVC_S3_REMOTE
         # dvc_repo_path =  _setup_dvc_temp() if ENV == 'production' else os.getcwd()
         try:
-            with dvc.api.open(X_TEST_PATH, mode='rb') as fd:
-                X_test = pd.read_parquet(fd)
-                main_logger.info('✅ successfully loaded x_test via dvc api')
+            if ENV == 'production':
+                with dvc.api.open(X_TEST_PATH, remote=DVC_REMOTE_NAME, mode='rb') as fd:
+                    X_test = pd.read_parquet(fd)
+                    main_logger.info('✅ successfully loaded x_test via dvc api')
+            else:
+                with dvc.api.open(X_TEST_PATH, mode='rb') as fd:
+                    X_test = pd.read_parquet(fd)
+                    main_logger.info('✅ successfully loaded x_test via dvc api')
 
         except DvcException as e:
             main_logger.error(f'❌ dvc api error: failed to load from dvc remote: {e}', exc_info=True)
@@ -177,16 +187,14 @@ def load_preprocessor():
     if not os.environ.get('PYTEST_RUN', False):
         main_logger.info("... loading transformer ...")
         try:
-            import subprocess
-            main_logger.info(f"... explicitly pulling {PREPROCESSOR_PATH} to /tmp cache ...")
-            subprocess.check_call(["dvc", "pull", PREPROCESSOR_PATH])
-            main_logger.info(f"✅ dvc pull successful")
-
-            # fetch the file data from the dvc remote
-            # dvc_repo_path =  _setup_dvc_temp() if ENV == 'production' else os.getcwd()
-            with dvc.api.open(PREPROCESSOR_PATH, mode='rb') as fd:
-                preprocessor = joblib.load(fd)
-                main_logger.info('✅ successfully loaded preprocessor via dvc api')
+            if ENV == 'production':
+                with dvc.api.open(PREPROCESSOR_PATH, remote=DVC_REMOTE_NAME, mode='rb') as fd:
+                    preprocessor = joblib.load(fd)
+                    main_logger.info('✅ successfully loaded preprocessor via dvc api')
+            else:
+                with dvc.api.open(PREPROCESSOR_PATH, mode='rb') as fd:
+                    preprocessor = joblib.load(fd)
+                    main_logger.info('✅ successfully loaded preprocessor via dvc api')
 
         except DvcException as e:
             main_logger.error(f'❌ dvc api error: failed from dvc remote: {e}', exc_info=True)
@@ -309,12 +317,11 @@ def load_artifacts_backup_model():
 # api endpoints
 @app.route('/')
 def hello_world():
-    env = os.environ.get('ENV', None)
-    if env == 'local': return """<p>Hello, world</p><p>I am an API endpoint.</p>"""
+    if ENV == 'local': return """<p>Hello, world</p><p>I am an API endpoint.</p>"""
 
     data = request.json if request.is_json else request.data.decode('utf-8')
-    main_logger.info(f"request received! ENV: {env}, Data: {data}")
-    return jsonify({"message": f"Hello from Flask in Lambda! ENV: {env}", "received_data": data})
+    main_logger.info(f"request received! ENV: {ENV}, Data: {data}")
+    return jsonify({"message": f"Hello from Flask in Lambda! ENV: {ENV}", "received_data": data})
 
 
 @app.route('/v1/predict-price/<string:stockcode>', methods=['GET', 'OPTIONS'])
@@ -586,7 +593,7 @@ def handler(event, context):
 
 
 if __name__ == '__main__':
-    if os.environ.get('ENV') == 'local':
+    if ENV == 'local':
         main_logger.info("... running flask app with waitress for local development ... ")
         serve(app, host='0.0.0.0', port=5002)
     else:
