@@ -59,7 +59,7 @@ def tune_and_train(
     if should_local_save: scripts.save_model_to_local(checkpoint=best_checkpoint, trig='best')
 
     # dvc track - model
-    DFN_FILE_PATH = os.path.join('models', 'production', f'dfn_best_{stockcode}.pth') if stockcode else os.path.join('models', 'production', f'dfn_best.pth')
+    DFN_FILE_PATH = os.path.join('models', 'production', f'dfn_best_{stockcode}.pth' if stockcode else 'dfn_best.pth')
     os.makedirs(os.path.dirname(DFN_FILE_PATH), exist_ok=True)
     torch.save(best_checkpoint, DFN_FILE_PATH)
 

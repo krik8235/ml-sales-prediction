@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import numpy as np
 import pandas as pd
 import torch
@@ -58,7 +59,18 @@ if __name__ == '__main__':
     if isinstance(shap_values, list): shap_values = shap_values[0]
     if isinstance(shap_values, torch.Tensor): shap_values = shap_values.cpu().numpy()
     shap_values = shap_values.squeeze(axis=-1) # type: ignore
-    shap_df = pd.DataFrame(shap_values, columns=X_test.columns) # use the original feature names from the pandas df
+
+
+    FEATURE_NAMES_PATH = os.path.join('preprocessors', 'feature_names.json')
+    try:
+        with open(FEATURE_NAMES_PATH, 'r') as f:
+            feature_names = json.load(f)
+    except FileNotFoundError:
+        feature_names = X_test.columns.tolist()
+
+    if len(X_test.columns) == len(feature_names): X_test.columns = feature_names
+
+    shap_df = pd.DataFrame(shap_values, columns=feature_names)
 
     # dvc track - shap raw data to the dvc tracked path
     RAW_SHAP_OUT_PATH = os.path.join('reports', f'dfn_raw_shap_values_{STOCKCODE}.parquet')
@@ -68,29 +80,17 @@ if __name__ == '__main__':
 
     # dvc track - bar plot mean abs shap vals
     mean_abs_shap = shap_df.abs().mean().sort_values(ascending=False)
-    shap_mean_abs_df = pd.DataFrame({
-        'feature_name': mean_abs_shap.index,
-        'mean_abs_shap': mean_abs_shap.values
-    })
+    shap_mean_abs_df = pd.DataFrame({'feature_name': feature_names, 'mean_abs_shap': mean_abs_shap.values })
     MEAN_ABS_SHAP_PATH = os.path.join('reports', f'dfn_shap_mean_abs_{STOCKCODE}.json')
     shap_mean_abs_df.to_json(MEAN_ABS_SHAP_PATH, orient='records', indent=4)
     main_logger.info(f'... mean abs shap values saved to {MEAN_ABS_SHAP_PATH} ...')
 
     # dvc track - plot summary / beeswarm shap vals
-    shap_melted_df = shap_df.melt(
-        value_vars=shap_df.columns, # type: ignore
-        var_name='feature_name',
-        value_name='shap_value'
-    )
+    shap_melted_df = shap_df.melt(value_vars=feature_names, var_name='feature_name', value_name='shap_value') # type: ignore
 
     # add the corresponding original feature vals from x_test
-    X_test_melted = X_test.melt(
-        value_vars=X_test.columns, # type: ignore
-        var_name='feature_name',
-        value_name='feature_value'
-    ).drop(columns=['feature_name']) # drop 'feature_name'
+    X_test_melted = X_test.melt(value_vars=X_test.columns, var_name='feature_name', value_name='feature_value').drop(columns=['feature_name']) # drop 'feature_name' # type: ignore
 
-    # combine shap values, feature names, and feature values
     shap_summary_df = pd.concat([shap_melted_df, X_test_melted], axis=1)
 
     SHAP_SUMMARY_PATH = os.path.join('reports', f'dfn_shap_summary_{STOCKCODE}.json')

@@ -261,7 +261,7 @@ def bayesian_optimization(X_train, X_val, y_train, y_val, n_trials: int = 50, nu
         model=best_model,
         optimizer=best_optimizer,
         criterion = criterion,
-        num_epochs=1000,
+        num_epochs=num_epochs,
         patience=20
     )
 

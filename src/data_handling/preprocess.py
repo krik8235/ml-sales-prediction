@@ -1,5 +1,6 @@
 import os
 import argparse
+import json
 import joblib
 import pandas as pd
 import numpy as np
@@ -16,7 +17,7 @@ def preprocess(stockcode: str = '', target_col: str = 'quantity', should_scale: 
     PREPROCESSOR_PATH = os.path.join('preprocessors', 'column_transformer.pkl')
     preprocessor = None
 
-    # integrate w/ dvc.yaml to extract the processed df
+    # extract the processed df from dvc cache
     df = pd.read_parquet(PROCESSED_DF_PATH)
 
     # categorize num and cat columns
@@ -91,9 +92,14 @@ def preprocess(stockcode: str = '', target_col: str = 'quantity', should_scale: 
 
 
     if should_scale:
-        X_full  = df.copy().drop(target_col, axis='columns')
+        X_full = df.copy().drop(target_col, axis='columns')
         preprocessor.fit(X_full)
         joblib.dump(preprocessor, PREPROCESSOR_PATH)
+
+        # save feature names (dvc track) for shap
+        with open('preprocessors/feature_names.json', 'w') as f:
+            feature_names = preprocessor.get_feature_names_out()
+            json.dump(feature_names.tolist(), f)
 
     return  X_train, X_val, X_test, y_train, y_val, y_test, preprocessor
 

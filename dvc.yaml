@@ -80,6 +80,7 @@ stages:
 
       # fitted preprocessor
       - preprocessors/column_transformer.pkl
+      - preprocessors/feature_names.json
 
   preprocess_stockcode:
     cmd: >
