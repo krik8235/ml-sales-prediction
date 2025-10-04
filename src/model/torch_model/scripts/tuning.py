@@ -1,7 +1,6 @@
 import itertools
 import pandas as pd
-import numpy as np
-import optuna # type: ignore
+import optuna
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -169,7 +168,7 @@ def grid_search(X_train, X_val, y_train, y_val, search_space: dict, verbose: boo
 
 
 
-def bayesian_optimization(X_train, X_val, y_train, y_val, n_trials: int = 50):
+def bayesian_optimization(X_train, X_val, y_train, y_val, n_trials: int = 50, num_epochs: int = 3000):
     """
     Runs Bayesian Optimization to search the best hyperparameters.
     """
@@ -211,7 +210,6 @@ def bayesian_optimization(X_train, X_val, y_train, y_val, n_trials: int = 50):
         val_data_loader = create_torch_data_loader(X=X_val_search, y=y_val_search, batch_size=batch_size)
 
         # training
-        num_epochs = 3000
         _, best_val_loss = train_model(
             train_data_loader=train_data_loader,
             val_data_loader=val_data_loader,
@@ -263,7 +261,8 @@ def bayesian_optimization(X_train, X_val, y_train, y_val, n_trials: int = 50):
         model=best_model,
         optimizer=best_optimizer,
         criterion = criterion,
-        num_epochs=1000
+        num_epochs=1000,
+        patience=20
     )
 
     checkpoint = {

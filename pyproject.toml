@@ -29,6 +29,7 @@ dependencies = [
     "prefect-aws>=0.5.13",
     "prefect>=3.4.19",
     "evidently>=0.7.14",
+    "shap>=0.48.0",
 ]
 
 [project.urls]

@@ -13,3 +13,7 @@
 /y_val_df_85123A.parquet
 /y_test_df_85123A.parquet
 /processed_df_85123A.parquet
+/dfn_inference_results_85123A.parquet
+/x_train_processed_85123A.parquet
+/x_val_processed_85123A.parquet
+/x_test_processed_85123A.parquet

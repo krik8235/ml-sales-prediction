@@ -1,13 +1,12 @@
 import os
 import torch
 import pickle
-import joblib
 import numpy as np
-import lightgbm as lgb # type: ignore
+import lightgbm as lgb
 from sklearn.linear_model import ElasticNet
 from sklearn.svm import SVR
-from skopt.space import Real, Integer, Categorical # type: ignore
-from dotenv import load_dotenv # type: ignore
+from skopt.space import Real, Integer, Categorical
+from dotenv import load_dotenv
 
 import src.data_handling as data_handling
 import src.model.torch_model as t
@@ -127,7 +126,7 @@ def main_script():
 
     ## models
     # torch dfn
-    best_dfn_full_trained, checkpoint = t.main_script(X_train, X_val, y_train, y_val)
+    best_dfn_full_trained, checkpoint = t.tune_and_train(X_train, X_val, y_train, y_val)
     torch.save(checkpoint, DFN_FILE_PATH)
     s3_upload(file_path=DFN_FILE_PATH)
 

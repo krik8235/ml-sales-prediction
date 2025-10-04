@@ -3,3 +3,9 @@ params:
   target_col: "quantity"
   should_scale: True
   verbose: False
+
+tuning:
+  n_trials: 100
+  num_epochs: 3000
+  should_local_save: False
+  grid: False

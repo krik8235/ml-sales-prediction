@@ -16,7 +16,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
 @task(retries=3, retry_delay_seconds=30)
-def run_dvc_etl_pipeline():
+def run_dvc_pipeline():
     """prefect task to run dvc pipeline defined in the dvc.yaml file"""
 
     main_logger.info('... checking dvc status and running pipeline ...')
@@ -32,7 +32,7 @@ def run_dvc_etl_pipeline():
 
 @flow(name="Weekly Data Pipeline")
 def weekly_data_flow():
-    run_dvc_etl_pipeline()
+    run_dvc_pipeline()
 
 
 if __name__ == '__main__':
@@ -40,7 +40,7 @@ if __name__ == '__main__':
     ENV = os.getenv('ENV', 'production')
     DOCKER_HUB_REPO = os.getenv('DOCKER_HUB_REPO')
     ECR_FOR_PREFECT_PATH = os.getenv('ECR_FOR_PREFECT_PATH')
-    image_repo = f'{DOCKER_HUB_REPO}:ml-sales-pred-data-latest' if ENV == 'local' else f'{ECR_FOR_PREFECT_PATH}:latest'
+    image_repo = f'{DOCKER_HUB_REPO}:ml-sales-pred-lineage-latest' if ENV == 'local' else f'{ECR_FOR_PREFECT_PATH}:latest'
 
     weekly_schedule = Schedule(
         interval=timedelta(weeks=1),
@@ -55,10 +55,10 @@ if __name__ == '__main__':
     ).save('aws', overwrite=True)
 
     weekly_data_flow.deploy(
-        name=f'weekly-data-flow',
+        name=f'weekly-ml-lineage',
         schedule=weekly_schedule,
         work_pool_name="wp-ml-sales-pred",
-        image=image_repo, # create a docker image at docker hub (local) or ecr (production)
+        image=image_repo, # create a docker image stored in docker hub (local) or ecr (production)
         concurrency_limit=3,
         push=True
     )

@@ -1,7 +1,7 @@
 import math
 import torch
 import torch.nn as nn
-import optuna # type: ignore
+import optuna
 from sklearn.model_selection import train_test_split
 
 from src._utils import main_logger

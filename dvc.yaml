@@ -33,8 +33,8 @@ stages:
       python src/data_handling/report_data_drift.py
       data/processed/processed_df.csv
       data/processed_df_${params.stockcode}.parquet
-      reports/drift_report_${params.stockcode}.html
-      metrics/drift_metrics_${params.stockcode}.json
+      reports/data_drift_report_${params.stockcode}.html
+      metrics/data_drift_metrics_${params.stockcode}.json
       ${params.stockcode}
 
     params:
@@ -47,11 +47,11 @@ stages:
       - data/
 
     plots:
-      - reports/drift_report_${params.stockcode}.html: # dvc plots the results
-          cache: false # html report is large - skip caching
+      - reports/data_drift_report_${params.stockcode}.html: # dvc plots the results
+          cache: true # large file - cache
 
     metrics:
-      - metrics/drift_metrics_${params.stockcode}.json: # dvc tracks and versions the metrics
+      - metrics/data_drift_metrics_${params.stockcode}.json: # dvc tracks and versions the metrics
           type: json
 
   preprocess_full:
@@ -105,3 +105,80 @@ stages:
       - data/y_train_df_${params.stockcode}.parquet
       - data/y_val_df_${params.stockcode}.parquet
       - data/y_test_df_${params.stockcode}.parquet
+
+      # processed input datasets
+      - data/x_train_processed_${params.stockcode}.parquet
+      - data/x_val_processed_${params.stockcode}.parquet
+      - data/x_test_processed_${params.stockcode}.parquet
+
+  tune_primary_model:
+    cmd: >
+      python src/model/torch_model/main.py
+      data/x_train_processed_${params.stockcode}.parquet
+      data/x_val_processed_${params.stockcode}.parquet
+      data/y_train_df_${params.stockcode}.parquet
+      data/y_val_df_${params.stockcode}.parquet
+      ${tuning.should_local_save}
+      ${tuning.grid}
+      ${tuning.n_trials}
+      ${tuning.num_epochs}
+      ${params.stockcode}
+
+    deps:
+      - src/model/torch_model/main.py
+      - src/data_handling/
+      - src/model/
+      - src/_utils/
+
+    params:
+      - params.stockcode
+      - tuning.n_trials
+      - tuning.grid
+      - tuning.should_local_save
+
+    outs:
+      - models/production/dfn_best_${params.stockcode}.pth # dvc track
+
+    metrics:
+      - metrics/val_${params.stockcode}.json: # dvc track
+          cache: false # small file - no need to cache
+
+  inference_primary_model:
+    cmd: >
+      python src/model/torch_model/inference.py
+      data/x_test_processed_${params.stockcode}.parquet
+      data/y_test_df_${params.stockcode}.parquet
+      models/production/dfn_best_${params.stockcode}.pth
+      ${params.stockcode}
+
+    deps:
+      - src/model/torch_model/inference.py
+      - models/production/
+      - src/model/
+      - src/_utils/
+
+    # params:
+    #   - params.inference_start_date
+
+    metrics:
+      - metrics/dfn_inference_results_${params.stockcode}.json: # dvc track
+          type: json
+
+    plots:
+      # shap summary / beeswarm plot for global interpretability
+      - reports/dfn_shap_summary_${params.stockcode}.json:
+          template: simple
+          x: shap_value
+          y: feature_name
+          title: SHAP Beeswarm Plot
+
+      # shap mean absolute vals - feature importance bar plot
+      - reports/dfn_shap_mean_abs_${params.stockcode}.json:
+          template: bar
+          x: mean_abs_shap
+          y: feature_name
+          title: Mean Absolute SHAP Importance
+
+    outs:
+      - data/dfn_inference_results_${params.stockcode}.parquet # y_pred
+      - reports/dfn_raw_shap_values_${params.stockcode}.parquet # save raw shap vals for detailed analysis later

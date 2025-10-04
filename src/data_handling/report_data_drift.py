@@ -27,6 +27,9 @@ if __name__ == '__main__':
     METRICS_OUTPUT_PATH = sys.argv[4]
     STOCKCODE = sys.argv[5]
 
+    os.makedirs(os.path.dirname(REPORT_OUTPUT_PATH), exist_ok=True)
+    os.makedirs(os.path.dirname(METRICS_OUTPUT_PATH), exist_ok=True)
+
     # extract datasets
     reference_data_full = pd.read_csv(REFERENCE_DATA_PATH)
     reference_data_stockcode = reference_data_full[reference_data_full['stockcode'] == STOCKCODE]

@@ -247,11 +247,17 @@ uv sync
 
 ### Managing **DVC** Pipeline
 
-- Run full DVC pipeline:
+- Run the DVC pipeline and push the updated data to cache:
 
 ```bash
 dvc repro
 dvc push
+```
+
+- Force run all stages in the DVC pipeline including stages without any updates:
+
+```bash
+dvc repro -f
 ```
 
 - Run the DVC pipeline for a specific stockcode:
@@ -292,7 +298,7 @@ export PREFECT_API_URL="http://127.0.0.1:4200/api"
 - Deploy the weekly DVC pipeline run (from the Docker container)
 
 ```bash
-uv run src/data_handling/prefect_flows.py
+uv run src/prefect_flows.py
 ```
 
 

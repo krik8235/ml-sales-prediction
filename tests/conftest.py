@@ -50,10 +50,6 @@ def mock_external_dependencies(monkeypatch):
     monkeypatch.setattr('boto3.client', mock_boto3_client)
     monkeypatch.setattr(app.joblib, 'load', mock_joblib_load)
 
-    # patch joblib.load imported in src.main
-    from src import main
-    monkeypatch.setattr(main.joblib, 'load', mock_joblib_load)
-
     # patch global joblib.load
     monkeypatch.setattr('joblib.load', mock_joblib_load)
 

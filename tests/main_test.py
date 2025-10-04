@@ -16,13 +16,6 @@ EN_FILE_PATH = main_script.EN_FILE_PATH
 PREPROCESSOR_PATH = main_script.PREPROCESSOR_PATH
 
 
-@pytest.fixture(autouse=True) # ensure the fixture is always active
-def mock_joblib_dump():
-    """mocks joblib.dump to prevent picklingerror"""
-    with patch('src.main.joblib.dump', new_callable=MagicMock) as mock_dump:
-        yield mock_dump
-
-
 @pytest.fixture(autouse=True)
 def mock_pickle_dump():
     """mocks pickle.dump to prevent picklingerror"""
@@ -87,7 +80,7 @@ def mock_data_handling():
 def mock_model_scripts():
     """mocks the model training scripts to return dummy models and checkpoints."""
 
-    with patch('src.main.t.main_script') as mock_torch_script, \
+    with patch('src.main.t.tune_and_train') as mock_torch_script, \
          patch('src.main.sk.main_script') as mock_sklearn_script:
 
         # mocks pytorch scripts

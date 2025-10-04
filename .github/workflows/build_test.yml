@@ -46,22 +46,22 @@ jobs:
           CORS_ORIGINS: "http://localhost:3000,http://127.0.0.1:3000"
           PYTEST_RUN: true
 
-      # # static analysis and dependency scanning with snyk
-      # - name: run snyk sast
-      #   uses: snyk/actions/python@master
-      #   with:
-      #     command: test
-      #     args: --severity-threshold=high --policy-path=.synk --python-version=3.12 --skip-unresolved --file=requirements.txt
-      #   env:
-      #     SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      # static analysis and dependency scanning with snyk
+      - name: run snyk sast
+        uses: snyk/actions/python@master
+        with:
+          command: test
+          args: --severity-threshold=high --policy-path=.synk --python-version=3.12 --skip-unresolved --file=requirements.txt
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-      # - name: run snyk sca
-      #   uses: snyk/actions/python@master
-      #   with:
-      #     command: code test
-      #     args: --severity-threshold=high --policy-path=.synk --python-version=3.12 --skip-unresolved --file=requirements.txt
-      #   env:
-      #     SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      - name: run snyk sca
+        uses: snyk/actions/python@master
+        with:
+          command: code test
+          args: --severity-threshold=high --policy-path=.synk --python-version=3.12 --skip-unresolved --file=requirements.txt
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
       # config aws credentials using oidc
       - name: configure aws credentials

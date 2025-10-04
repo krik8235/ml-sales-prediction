@@ -63,8 +63,8 @@ def load_model(checkpoint: dict = {}, model_name: str = 'dfn', trig: str ='best'
         return model
 
     except Exception as e:
-        main_logger.error(f"failed to load PyTorch model: {e}")
-        raise Exception('failed to load the model.')
+        main_logger.error(f"... failed to load pytorch model: {e}")
+        raise
 
 
 # for training
@@ -95,5 +95,5 @@ def load_model_and_optimizer(checkpoint: dict = {}, model_name: str = 'dfn', tri
         return model, optimizer, checkpoint
 
     except Exception as e:
-        main_logger.error(f"failed to load the optimizer: {e}")
-        raise Exception('failed to load the optimizer.')
+        main_logger.error(f"... failed to load the model or optimizer: {e}")
+        raise

@@ -14,6 +14,7 @@ def preprocess(stockcode: str = '', target_col: str = 'quantity', should_scale: 
     # file paths
     PROCESSED_DF_PATH = os.path.join('data', 'processed_df.parquet')
     PREPROCESSOR_PATH = os.path.join('preprocessors', 'column_transformer.pkl')
+    preprocessor = None
 
     # integrate w/ dvc.yaml to extract the processed df
     df = pd.read_parquet(PROCESSED_DF_PATH)
@@ -59,11 +60,6 @@ def preprocess(stockcode: str = '', target_col: str = 'quantity', should_scale: 
         if np.isnan(X_train).any(): main_logger.error('NaNs found in scaled data'); raise
         if np.isinf(X_train).any(): main_logger.error('Infs found in scaled data'); raise
 
-        # load trained preprocessor
-        if should_scale:
-            preprocessor.fit(X)
-            joblib.dump(preprocessor, PREPROCESSOR_PATH)
-
 
     else:
         df_stockcode = pd.read_parquet(f'data/processed_df_{stockcode}.parquet')
@@ -88,11 +84,16 @@ def preprocess(stockcode: str = '', target_col: str = 'quantity', should_scale: 
         X_val = preprocessor.transform(X_val)
         X_test = preprocessor.transform(X_test)
 
-        # X_train, X_val, X_test, preprocessor = scripts.transform_input(
-        #     X_train, X_val, X_test,
-        #     num_cols=num_cols if should_scale else [],
-        #     cat_cols=cat_cols
-        # )
+        # dvc track
+        pd.DataFrame(X_train).to_parquet(f'data/x_train_processed_{stockcode}.parquet', index=False)
+        pd.DataFrame(X_val).to_parquet(f'data/x_val_processed_{stockcode}.parquet', index=False)
+        pd.DataFrame(X_test).to_parquet(f'data/x_test_processed_{stockcode}.parquet', index=False)
+
+
+    if should_scale:
+        X_full  = df.copy().drop(target_col, axis='columns')
+        preprocessor.fit(X_full)
+        joblib.dump(preprocessor, PREPROCESSOR_PATH)
 
     return  X_train, X_val, X_test, y_train, y_val, y_test, preprocessor
 
