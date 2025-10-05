@@ -3,20 +3,20 @@ stages:
   etl_pipeline_full:
     cmd: python src/data_handling/etl_pipeline.py
     deps:
-    - path: src/_utils
+    - path: src/_utils/
       hash: md5
       md5: ae41392532188d290395495f6827ed00.dir
       size: 15870
       nfiles: 10
     - path: src/data_handling/
       hash: md5
-      md5: 482d9dcb0b3fd268f4355093dc0c3255.dir
-      size: 96304
+      md5: 0977302ad62de2eea983f26db153120c.dir
+      size: 93768
       nfiles: 30
     - path: src/data_handling/etl_pipeline.py
       hash: md5
-      md5: e7ae635652a4c6f98eae3f5dab570da9
-      size: 1862
+      md5: bf5c808ea447f5b016e8a5e5f50e2b91
+      size: 1763
     outs:
     - path: data/original_df.parquet
       hash: md5
@@ -29,20 +29,20 @@ stages:
   etl_pipeline_stockcode:
     cmd: python src/data_handling/etl_pipeline.py --stockcode 85123A
     deps:
-    - path: src/_utils
+    - path: src/_utils/
       hash: md5
       md5: ae41392532188d290395495f6827ed00.dir
       size: 15870
       nfiles: 10
     - path: src/data_handling/
       hash: md5
-      md5: 482d9dcb0b3fd268f4355093dc0c3255.dir
-      size: 96304
+      md5: 0977302ad62de2eea983f26db153120c.dir
+      size: 93768
       nfiles: 30
     - path: src/data_handling/etl_pipeline.py
       hash: md5
-      md5: e7ae635652a4c6f98eae3f5dab570da9
-      size: 1862
+      md5: bf5c808ea447f5b016e8a5e5f50e2b91
+      size: 1763
     params:
       params.yaml:
         params.stockcode: 85123A
@@ -62,13 +62,13 @@ stages:
       nfiles: 10
     - path: src/data_handling/
       hash: md5
-      md5: 482d9dcb0b3fd268f4355093dc0c3255.dir
-      size: 96304
+      md5: 0977302ad62de2eea983f26db153120c.dir
+      size: 93768
       nfiles: 30
     - path: src/data_handling/preprocess.py
       hash: md5
-      md5: bca2d74b54f563bb166127d80363c9d4
-      size: 5627
+      md5: 2618137dd29b1b569ca5692d032595bf
+      size: 6154
     params:
       params.yaml:
         params.should_scale: true
@@ -79,14 +79,26 @@ stages:
       hash: md5
       md5: 01da54f6b6b37e7827cce3ac28797727
       size: 638272
+    - path: data/x_test_processed.parquet
+      hash: md5
+      md5: f6c5ec0a4d7ac8a9f7ae7345111c4327
+      size: 655361
     - path: data/x_train_df.parquet
       hash: md5
       md5: 21b49b634fcd6b012386fbe08e4da376
       size: 5312507
+    - path: data/x_train_processed.parquet
+      hash: md5
+      md5: b84d4f821af05e182df7a83ea0a436d6
+      size: 5403755
     - path: data/x_val_df.parquet
       hash: md5
       md5: 1c2a2fc23cd963c0c9e2fc6c5f254a34
       size: 589368
+    - path: data/x_val_processed.parquet
+      hash: md5
+      md5: 6e68881d8e1d9cab789694490495d23a
+      size: 605827
     - path: data/y_test_df.parquet
       hash: md5
       md5: 4ca500e54909a26840f31633e6ec636c
@@ -118,13 +130,13 @@ stages:
       nfiles: 10
     - path: src/data_handling/
       hash: md5
-      md5: 482d9dcb0b3fd268f4355093dc0c3255.dir
-      size: 96304
+      md5: 0977302ad62de2eea983f26db153120c.dir
+      size: 93768
       nfiles: 30
     - path: src/data_handling/preprocess.py
       hash: md5
-      md5: bca2d74b54f563bb166127d80363c9d4
-      size: 5627
+      md5: 2618137dd29b1b569ca5692d032595bf
+      size: 6154
     params:
       params.yaml:
         params.should_scale: true
@@ -211,9 +223,9 @@ stages:
     deps:
     - path: data/
       hash: md5
-      md5: 64dcc62aa5a27daf16d3ae07513bd991.dir
-      size: 149487896
-      nfiles: 26
+      md5: 0aa8c3a4bcb52885af5d1f1e3b9dfcdb.dir
+      size: 156151957
+      nfiles: 29
     - path: src/_utils/
       hash: md5
       md5: ae41392532188d290395495f6827ed00.dir
@@ -225,8 +237,8 @@ stages:
       size: 2840
     - path: src/data_handling/scripts/
       hash: md5
-      md5: 5286620867e02f604a607584e373050e.dir
-      size: 54458
+      md5: a9bcad961d88a05cabece3ad08fde802.dir
+      size: 50886
       nfiles: 16
     params:
       params.yaml:
@@ -238,7 +250,7 @@ stages:
       size: 80
     - path: reports/data_drift_report_85123A.html
       hash: md5
-      md5: 7fe0d7f09e0d5e5e5433d2c4086e694d
+      md5: e6dd4788492ad6bfd2b1306fff0cfe8b
       size: 4557812
   tune_and_train_primary_model:
     cmd: "python src/model/torch_model/main.py data/x_train_processed_85123A.parquet
@@ -291,13 +303,13 @@ stages:
       nfiles: 10
     - path: src/data_handling/
       hash: md5
-      md5: 482d9dcb0b3fd268f4355093dc0c3255.dir
-      size: 96304
+      md5: 0977302ad62de2eea983f26db153120c.dir
+      size: 93768
       nfiles: 30
     - path: src/model/
       hash: md5
-      md5: 0256b3eaea0c3c10f5640a1aa01fb35e.dir
-      size: 191130
+      md5: c309a9c60327d408ef5a705df6bf50a2.dir
+      size: 191218
       nfiles: 58
     - path: src/model/torch_model/main.py
       hash: md5
@@ -312,20 +324,20 @@ stages:
     outs:
     - path: metrics/val_85123A.json
       hash: md5
-      md5: fb788bbeeeb8dc112571d55a3c4551d9
-      size: 143
+      md5: 19cf4f8a5333297e55cbc51fc6954a6c
+      size: 144
     - path: models/production/dfn_best_85123A.pth
       hash: md5
-      md5: 1d57dad677770f92a4d9419048a2e97f
-      size: 2716415
+      md5: d085eb4970719587a559fa98e4072e77
+      size: 1518787
   inference_primary_model:
     cmd: "python src/model/torch_model/inference.py data/x_test_processed_85123A.parquet
       data/y_test_df_85123A.parquet models/production/dfn_best_85123A.pth 85123A\n"
     deps:
     - path: models/production/
       hash: md5
-      md5: 4d9f69eb917453d0bea8f6ec728d059d.dir
-      size: 2716436
+      md5: b4f6f5cf8c0b0794b920304cb2726155.dir
+      size: 1518808
       nfiles: 2
     - path: src/_utils/
       hash: md5
@@ -334,31 +346,31 @@ stages:
       nfiles: 10
     - path: src/model/
       hash: md5
-      md5: 0256b3eaea0c3c10f5640a1aa01fb35e.dir
-      size: 191130
+      md5: ba7e64ea9f43fd81bfc54242ce230ce4.dir
+      size: 191127
       nfiles: 58
     - path: src/model/torch_model/inference.py
       hash: md5
-      md5: 61ba951f6bfe06b90ca50a25cd557ce8
-      size: 4159
+      md5: 8b24f37e3993ec0db2f99390b2e77d86
+      size: 4156
     outs:
     - path: data/dfn_inference_results_85123A.parquet
       hash: md5
-      md5: 0f572838cb07844f875cd18312205ad1
-      size: 2572
+      md5: aa62f63a49891a1eb6572840476ff147
+      size: 1612
     - path: metrics/dfn_inference_results_85123A.json
       hash: md5
-      md5: 70ae52ce3dca52c4eb50e2315b2f8480
+      md5: d72fc9136874fb537f2ccaccaf8a927b
       size: 142
     - path: reports/dfn_raw_shap_values_85123A.parquet
       hash: md5
-      md5: a4963fa516cc07cf568897645567beab
-      size: 174421
+      md5: d7046bbec10f085384dda9ff32aac804
+      size: 179053
     - path: reports/dfn_shap_mean_abs_85123A.json
       hash: md5
-      md5: a1a74a4120da8eb01ad222e48b4a91f5
-      size: 5914
+      md5: 3fc3adb90ef16b17be500c1a74360922
+      size: 5915
     - path: reports/dfn_shap_summary_85123A.json
       hash: md5
-      md5: fb44a7e8bf75b0b5fbd4c07c300b5b14
-      size: 3487626
+      md5: 083f03a9d2354cb44508e54de7bd0bac
+      size: 3491226
