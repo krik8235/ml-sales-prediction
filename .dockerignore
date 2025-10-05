@@ -38,10 +38,8 @@ metrics/
 
 
 # excl. large original files of data, preprocessor, and models
-data/*.parquet
-data/*.csv
+data/
 
-preprocessors/*.pkl
+preprocessors/
 
-models/production/*.pth
-models/production/*.pkl
+models/

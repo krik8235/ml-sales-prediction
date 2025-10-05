@@ -69,7 +69,7 @@ def preprocess(stockcode: str = '', target_col: str = 'quantity', should_scale: 
         pd.DataFrame(X_test).to_parquet(f'data/x_test_processed.parquet', index=False) # type: ignore
 
 
-    else:
+    elif stockcode:
         df_stockcode = pd.read_parquet(f'data/processed_df_{stockcode}.parquet')
 
         y = df_stockcode[target_col]
@@ -88,7 +88,8 @@ def preprocess(stockcode: str = '', target_col: str = 'quantity', should_scale: 
         y_test.to_frame(name=target_col).to_parquet(f'data/y_test_df_{stockcode}.parquet', index=False)
 
         # preprocess
-        X_train = preprocessor.transform(X_train)
+        try: X_train = preprocessor.transform(X_train)
+        except: X_train = preprocessor.fit_transform(X_train)
         X_val = preprocessor.transform(X_val)
         X_test = preprocessor.transform(X_test)
 
@@ -98,10 +99,8 @@ def preprocess(stockcode: str = '', target_col: str = 'quantity', should_scale: 
         pd.DataFrame(X_test).to_parquet(f'data/x_test_processed_{stockcode}.parquet', index=False) # type: ignore
 
 
-    # upload trained preprocessor
     if should_scale:
-        X_full = df.copy().drop(target_col, axis='columns')
-        preprocessor.fit(X_full)
+        preprocessor.fit(df.copy().drop(target_col, axis='columns'))
         joblib.dump(preprocessor, PREPROCESSOR_PATH)
 
         # save feature names (dvc track) for shap
@@ -113,8 +112,6 @@ def preprocess(stockcode: str = '', target_col: str = 'quantity', should_scale: 
 
 
 if __name__ == '__main__':
-    stockcode_list = ['85123A', ]
-
     parser = argparse.ArgumentParser(description='run data preprocessing')
     parser.add_argument('--stockcode', type=str, default='', help='specific stockcode')
     parser.add_argument('--target_col', type=str, default='quantity', help='the target column name')

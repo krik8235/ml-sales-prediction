@@ -22,7 +22,7 @@ def etl_pipeline(stockcode: str = '', impute_stockcode: bool = False): # type: i
     # for stockcode specific df
     if stockcode:
         df_stockcode  = df[df['stockcode'] == stockcode]
-        if df_stockcode is None: main_logger.error(f'failed to load df by the given stockcode {stockcode}. return the entire processed df')
+        if df_stockcode is None: main_logger.error(f'... failed to load df by stockcode {stockcode}. return the entire df ...')
         df = df if df_stockcode is None else df_stockcode
 
         # load
