@@ -11,36 +11,6 @@ from category_encoders import BinaryEncoder # type: ignore
 from src._utils import main_logger
 
 
-def make_train_val_datasets(
-        df: pd.DataFrame,
-        target_col: str = 'quantity',
-        test_size: int = 50000,
-        random_state: int = 42,
-        verbose: bool = False,
-    ) -> tuple:
-    """
-    Makes train, validation, test datasets from the DataFrame
-    """
-
-    if df is None: main_logger.error('no dataframe found.')
-
-    X = df.copy().drop(columns=target_col)
-    y = df.copy()[target_col]
-
-    if X.isna().any().any(): main_logger.warning('input X has NaN'); raise Exception()
-    if X.isnull().any().any(): main_logger.warning('input X has null'); raise Exception()
-    if y.isna().any().any(): main_logger.warning('target y has NaN'); raise Exception()
-    if y.isnull().any().any(): main_logger.warning('target y has null'); raise Exception()
-
-    X_tv, X_test, y_tv, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
-    X_train, X_val, y_train, y_val = train_test_split(X_tv, y_tv, test_size=test_size, random_state=random_state)
-
-    if verbose:
-        main_logger.info(
-            f'datasets created:\nX_train: {X_train.shape}, X_val: {X_val.shape}, X_test: {X_test.shape}, y_train: {y_train.shape}, y_val: {y_val.shape}, y_test: {y_test.shape}')
-
-    return  X_train, X_val, X_test, y_train, y_val, y_test
-
 
 def create_preprocessor(num_cols, cat_cols):
     os.makedirs('preprocessors', exist_ok=True)

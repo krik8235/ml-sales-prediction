@@ -5,7 +5,7 @@ import src.data_handling.scripts as scripts
 from src._utils import main_logger
 
 
-def etl_pipeline(stockcode: str = '', impute_stockcode = False): # type: ignore
+def etl_pipeline(stockcode: str = '', impute_stockcode: bool = False): # type: ignore
     # extract the entire data
     df = scripts.extract_original_dataframe()
 
@@ -29,12 +29,11 @@ def etl_pipeline(stockcode: str = '', impute_stockcode = False): # type: ignore
         PROCESSED_DF_PATH = os.path.join('data', f'processed_df_{stockcode}.parquet')
         df.to_parquet(PROCESSED_DF_PATH, index=False) # dvc versioned
 
-    # load
+    # for full df
     else:
         PROCESSED_DF_PATH = os.path.join('data', 'processed_df.parquet')
         df.to_parquet(PROCESSED_DF_PATH, index=False) # dvc versioned
-        # scripts.load_df_to_csv(df=df)
-        # s3_upload(PROCESSED_DF_PATH) ## explictly comment out manual s3 upload
+
     return df
 
 

@@ -1,26 +1,23 @@
 stages:
   etl_pipeline_full:
-    # run the script
     cmd: python src/data_handling/etl_pipeline.py
 
-    # dependencies necessary to run the script
     deps:
-      - src/data_handling/etl_pipeline.py # the main etl script
-      - src/data_handling/ # all data_handling scripts
-      - src/_utils # all utility functions
+      - src/data_handling/etl_pipeline.py
+      - src/data_handling/
+      - src/_utils/
 
-    # outputs
     outs:
-      - data/original_df.parquet # output from the first part of the script
-      - data/processed_df.parquet # structured data
+      - data/original_df.parquet
+      - data/processed_df.parquet
 
   etl_pipeline_stockcode:
     cmd: python src/data_handling/etl_pipeline.py --stockcode ${params.stockcode}
 
     deps:
-      - src/data_handling/etl_pipeline.py # the main etl script
-      - src/data_handling/ # all data_handling scripts
-      - src/_utils # all utility functions
+      - src/data_handling/etl_pipeline.py
+      - src/data_handling/
+      - src/_utils/
 
     params:
       - params.stockcode
@@ -28,7 +25,7 @@ stages:
     outs:
       - data/processed_df_${params.stockcode}.parquet
 
-  data_drift_check: # run by stockcode
+  data_drift_check:
     cmd: >
       python src/data_handling/report_data_drift.py
       data/processed/processed_df.csv
@@ -78,7 +75,12 @@ stages:
       - data/y_val_df.parquet
       - data/y_test_df.parquet
 
-      # fitted preprocessor
+      # preprocessed input datasets
+      - data/x_train_processed.parquet
+      - data/x_val_processed.parquet
+      - data/x_test_processed.parquet
+
+      # fitted preprocessor and feature names for shap analysis
       - preprocessors/column_transformer.pkl
       - preprocessors/feature_names.json
 
@@ -142,7 +144,7 @@ stages:
 
     metrics:
       - metrics/val_${params.stockcode}.json: # dvc track
-          cache: false # small file - no need to cache
+          cache: false # file size is small. skip dvc cache
 
   inference_primary_model:
     cmd: >
