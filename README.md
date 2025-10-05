@@ -251,6 +251,13 @@ uv sync
 
 ```bash
 dvc repro
+
+# add updated lock file
+git add dvc.lock
+git commit -m'updated'
+git push
+
+# dvc push
 dvc push
 ```
 
