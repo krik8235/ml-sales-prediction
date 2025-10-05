@@ -184,8 +184,8 @@ def load_model(stockcode: str = ''):
     global model, backup_model
 
     if stockcode:
-        DFN_FILE_PATH_STOCKCODE = os.path.join('models', 'production', f'dfn_best_{stockcode}.pth')
         try:
+            DFN_FILE_PATH_STOCKCODE = os.path.join('models', 'production', f'dfn_best_{stockcode}.pth')
             main_logger.info('... loading artifacts - trained dfn by stockcode ...')
             with dvc.api.open(DFN_FILE_PATH_STOCKCODE, remote=DVC_REMOTE_NAME, mode='rb') as fd:
                 checkpoint = torch.load(fd, weights_only=False, map_location=device)
