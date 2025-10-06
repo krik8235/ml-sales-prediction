@@ -1,0 +1,15 @@
+{
+    "mse_unprivileged": 4.673650870930566,
+    "mae_unprivileged": 1.8193229102564865,
+    "rmsle_unprivileged": 0.669676102878674,
+    "mean_prediction_unprivileged": 2.3438785076141357,
+    "mae_diff": 1.8193229102564865,
+    "mean_outcome_difference": 2.3438785076141357,
+    "is_mod_acceptable": 0,
+    "model_version": "dfn_85123A_13568",
+    "sensitive_feature": "is_registered",
+    "privileged_group": 1,
+    "mod_threshold": 0.1,
+    "stockcode": "85123A",
+    "timestamp": "2025-10-06T18:47:46.028124"
+}

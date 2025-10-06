@@ -412,19 +412,17 @@ Common issues and solutions:
 │
 └── .github/                            # infrastructure ci/cd
 │
-└── .dvc/                               # dvc version control
+└── .dvc/                               # dvc folder - cache, tmp, config
 │
-└── data/                               # version tracked by dvc
-│     └──raw/                           # stores raw data
-│     └──preprocessed/                  # stores processed data after imputation and engineering
-│
-└── preprocessors/                      # version tracked by dvc
-│
-└── models/             [.gitignore]    # stores serialized model after training and tuning
+└── data/               [dvc track]     # version tracked by dvc
+└── preprocessors/      [dvc track]     # version tracked by dvc
+└── models/                             # stores serialized model after training and tuning
 │     └──dfn/                           # deep feedforward network
 │     └──gbm/                           # light gbm
 │     └──en/                            # elastic net
-│     └──production/                    # models to be stored in S3 for production use
+│     └──production/    [dvc track]     # models to be stored in S3 for production use
+└── reports/            [dvc track]     # reports on data drift, shap values
+└── metrics/            [dvc track]     # model evaluation metrics (mae, mse, rmsle)
 |
 └── notebooks/                          # stores experimentation notebooks
 │
@@ -435,23 +433,31 @@ Common issues and solutions:
 │     │     └── sklearn_model
 │     │     └── torch_model
 │     │     └── ...
-│     └──main.py                        # main script to run the inference locally
+│     └──main.py                        # main script to preform inference locally (without dvc repro)
 │
-└──app.py                               # Flask application (API endpoints)
+└── app.py                              # flask application (API endpoints)
 │
-└──pyproject.toml                       # project configuration
+└── tests/                              # pytest scripts and config
+└── pytest.ini
 │
-└──.env                [.gitignore]     # environment variables
+└── pyproject.toml                      # project config
 │
-└──uv.lock                              # dependency locking
+└── .env                [.gitignore]    # environment variables
 │
-└──Dockerfile                           # for Docker container image
-└──.dockerignore
+└── uv.lock                             # dependency locking
 │
-└──requirements.txt
+└── .python-version                     # python version locking (3.12)
 │
-└──.python-version                      # python version locking (3.12)
+└── Dockerfile.lambda.local             # docker config
+└── Dockerfile.lambda.production
+└── .dockerignore
+└── requirements.txt
 │
-└──dvc.yaml                             # config for dvc commands
-└──dvc.lock
+└── dvc.yaml                            # dvc pipeline config
+└── params.yaml
+└── .dvcignore
+└── dvc.lock
+│
+└── .pre-commit-config.yaml             # pre-commit check config
+└── .synk                               # synk (dependency and code scanning) config
 ```

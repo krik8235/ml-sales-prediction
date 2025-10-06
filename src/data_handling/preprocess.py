@@ -12,6 +12,14 @@ from src._utils import main_logger
 
 
 def preprocess(stockcode: str = '', target_col: str = 'quantity', should_scale: bool = True, verbose: bool = False):
+    # initiate metrics to track
+    DATA_DRIFT_METRICS_PATH = os.path.join('metrics', f'data_drift_{args.stockcode}.json') # dvc track
+
+    if os.path.exists(DATA_DRIFT_METRICS_PATH):
+        with open(DATA_DRIFT_METRICS_PATH, 'r') as f:
+            metrics = json.load(f)
+    else: metrics = dict()
+
     # load processed df from dvc cache
     PROCESSED_DF_PATH = os.path.join('data', 'processed_df.parquet')
     df = pd.read_parquet(PROCESSED_DF_PATH)
@@ -98,6 +106,10 @@ def preprocess(stockcode: str = '', target_col: str = 'quantity', should_scale: 
         pd.DataFrame(X_val).to_parquet(f'data/x_val_processed_{stockcode}.parquet', index=False) # type: ignore
         pd.DataFrame(X_test).to_parquet(f'data/x_test_processed_{stockcode}.parquet', index=False) # type: ignore
 
+        metrics.update({
+            "preprocess_status": "completed",
+            "x_train_processed_path": f'data/x_train_processed_{stockcode}.parquet'
+        })
 
     if should_scale:
         preprocessor.fit(df.copy().drop(target_col, axis='columns'))
@@ -107,6 +119,15 @@ def preprocess(stockcode: str = '', target_col: str = 'quantity', should_scale: 
         with open('preprocessors/feature_names.json', 'w') as f:
             feature_names = preprocessor.get_feature_names_out()
             json.dump(feature_names.tolist(), f)
+
+    metrics.update({
+        'preprocessor_path': PREPROCESSOR_PATH,
+    })
+
+    # dvc track
+    PROCESSED_DATA_PATH = os.path.join('metrics', f'data_{stockcode}.json')
+    with open(PROCESSED_DATA_PATH, 'w') as f:
+        json.dump(metrics, f, indent=4)
 
     return  X_train, X_val, X_test, y_train, y_val, y_test, preprocessor
 

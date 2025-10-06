@@ -9,3 +9,8 @@ tuning:
   num_epochs: 3000
   should_local_save: False
   grid: False
+
+tracking:
+  sensitive_feature_col: "is_registered"
+  privileged_group: 1 # member
+  mod_threshold: 0.1

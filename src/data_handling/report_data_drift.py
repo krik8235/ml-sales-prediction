@@ -2,6 +2,7 @@ import os
 import sys
 import json
 import pandas as pd
+import datetime
 from dotenv import load_dotenv
 
 from evidently import Dataset, DataDefinition, Report
@@ -56,7 +57,13 @@ if __name__ == '__main__':
     report_dict = json.loads(data_eval.json())
     num_drifts = report_dict['metrics'][0]['value']['count']
     shared_drifts = report_dict['metrics'][0]['value']['share']
-    metrics = dict(drift_detected=bool(num_drifts > 0.0), num_drifts=num_drifts, shared_drifts=shared_drifts)
+    metrics = dict(
+        drift_detected=bool(num_drifts > 0.0), num_drifts=num_drifts, shared_drifts=shared_drifts,
+        num_cols=nums,
+        cat_cols=cats,
+        stockcode=STOCKCODE,
+        timestamp=datetime.datetime.now().isoformat(),
+    )
 
     # store the metrics in json for dvc to track
     with open(METRICS_OUTPUT_PATH, 'w') as f:

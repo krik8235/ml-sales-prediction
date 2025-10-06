@@ -31,7 +31,7 @@ stages:
       data/processed/processed_df.csv
       data/processed_df_${params.stockcode}.parquet
       reports/data_drift_report_${params.stockcode}.html
-      metrics/data_drift_metrics_${params.stockcode}.json
+      metrics/data_drift_${params.stockcode}.json
       ${params.stockcode}
 
     params:
@@ -41,14 +41,13 @@ stages:
       - src/data_handling/report_data_drift.py
       - src/data_handling/scripts/
       - src/_utils/
-      - data/
 
     plots:
-      - reports/data_drift_report_${params.stockcode}.html: # dvc plots the results
+      - reports/data_drift_report_${params.stockcode}.html: # dvc plot
           cache: true # large file - cache
 
     metrics:
-      - metrics/data_drift_metrics_${params.stockcode}.json: # dvc tracks and versions the metrics
+      - metrics/data_drift_${params.stockcode}.json:
           type: json
 
   preprocess_full:
@@ -92,6 +91,7 @@ stages:
       - src/data_handling/preprocess.py
       - src/data_handling/
       - src/_utils
+      # - metrics/data_drift_${params.stockcode}.json
 
     # params from params.yaml
     params:
@@ -99,6 +99,11 @@ stages:
       - params.should_scale
       - params.verbose
       - params.stockcode
+
+    metrics:
+      - metrics/data_${params.stockcode}.json:
+          type: json
+          cache: true
 
     outs:
       # train, val, test datasets
@@ -143,8 +148,8 @@ stages:
       - models/production/dfn_best_${params.stockcode}.pth # dvc track
 
     metrics:
-      - metrics/val_${params.stockcode}.json: # dvc track
-          cache: false # file size is small. skip dvc cache
+      - metrics/dfn_val_${params.stockcode}.json: # dvc track
+          cache: true # cache
 
   inference_primary_model:
     cmd: >
@@ -153,6 +158,8 @@ stages:
       data/y_test_df_${params.stockcode}.parquet
       models/production/dfn_best_${params.stockcode}.pth
       ${params.stockcode}
+      ${tracking.sensitive_feature_col}
+      ${tracking.privileged_group}
 
     deps:
       - src/model/torch_model/inference.py
@@ -160,11 +167,13 @@ stages:
       - src/model/
       - src/_utils/
 
-    # params:
-    #   - params.inference_start_date
+    params:
+      - params.stockcode
+      - tracking.sensitive_feature_col
+      - tracking.privileged_group
 
     metrics:
-      - metrics/dfn_inference_results_${params.stockcode}.json: # dvc track
+      - metrics/dfn_inf_${params.stockcode}.json: # dvc track
           type: json
 
     plots:
@@ -185,3 +194,29 @@ stages:
     outs:
       - data/dfn_inference_results_${params.stockcode}.parquet # y_pred
       - reports/dfn_raw_shap_values_${params.stockcode}.parquet # save raw shap vals for detailed analysis later
+
+  assess_model_risk:
+    cmd: >
+      python src/model/torch_model/assess_risk_and_fairness.py
+      data/dfn_inference_results_${params.stockcode}.parquet
+      metrics/dfn_risk_fairness_${params.stockcode}.json
+      ${tracking.sensitive_feature_col}
+      ${params.stockcode}
+      ${tracking.privileged_group}
+      ${tracking.mod_threshold}
+
+    deps:
+      - src/model/torch_model/assess_risk_and_fairness.py
+      - src/_utils/
+      - data/dfn_inference_results_${params.stockcode}.parquet
+
+    params:
+      - params.stockcode
+      - tracking.sensitive_feature_col
+      - tracking.privileged_group
+      - tracking.mod_threshold
+
+    metrics:
+      - metrics/dfn_risk_fairness_${params.stockcode}.json:
+          type: json
+          cache: false

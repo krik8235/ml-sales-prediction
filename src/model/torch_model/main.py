@@ -1,5 +1,7 @@
 import os
 import sys
+import json
+import datetime
 import pandas as pd
 import torch
 import torch.nn as nn
@@ -66,14 +68,33 @@ def tune_and_train(
     return best_dfn, best_checkpoint
 
 
-def track_metrics_by_stockcode(X_val, y_val, best_model, checkpoint: dict, stockcode: str):
-    # dvc track - metrics
-    _, mse, exp_mae, rmsle = scripts.perform_inference(model=best_model, X=X_val, y=y_val)
-    metrics = dict(mse=mse, mae=exp_mae, rmsle=rmsle)
-    scripts.save_metrics(metrics=metrics, filepath=os.path.join('metrics', f'val_{stockcode}.json'))
 
-    # save historical metrics
+def track_metrics_by_stockcode(X_val, y_val, best_model, checkpoint: dict, stockcode: str):
+    MODEL_VAL_METRICS_PATH = os.path.join('metrics', f'dfn_val_{stockcode}.json')
+    os.makedirs(os.path.dirname(MODEL_VAL_METRICS_PATH), exist_ok=True)
+
+    # record val metrics
+    _, mse, exp_mae, rmsle = scripts.perform_inference(model=best_model, X=X_val, y=y_val)
     model_version = f"dfn_{stockcode}_{os.getpid()}"
+    metrics = dict(
+        stockcode=stockcode,
+        mse_val=mse,
+        mae_val=exp_mae,
+        rmsle_val=rmsle,
+        model_version=model_version,
+        hparams=checkpoint['hparams'],
+        optimizer=checkpoint['optimizer_name'],
+        batch_size=checkpoint['batch_size'],
+        lr=checkpoint['lr'],
+        timestamp=datetime.datetime.now().isoformat()
+    )
+    # dvc track
+    with open(MODEL_VAL_METRICS_PATH, 'w') as f:
+        json.dump(metrics, f, indent=4)
+        main_logger.info(f'... validation metrics saved to {MODEL_VAL_METRICS_PATH} ...')
+
+
+    # (optional) save historical metrics (not dvc tracking)
     scripts.save_historical_metric_to_s3(
         stockcode=stockcode,
         metrics=metrics,
