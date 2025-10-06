@@ -16,6 +16,7 @@ def etl_pipeline(stockcode: str = '', impute_stockcode: bool = False): # type: i
     # transform
     df = scripts.structure_missing_values(df=df)
     df = scripts.handle_feature_engineering(df=df)
+    # df.to_csv(os.path.join('data', 'processed', 'processed_df.csv'), index=False)
 
     if impute_stockcode: scripts.create_imputation_values_by_stockcode(base_df=df)
 
