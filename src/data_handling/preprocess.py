@@ -108,8 +108,14 @@ def preprocess(stockcode: str = '', target_col: str = 'quantity', should_scale: 
 
         metrics.update({
             "preprocess_status": "completed",
-            "x_train_processed_path": f'data/x_train_processed_{stockcode}.parquet'
+            "x_train_processed_path": f'data/x_train_processed_{stockcode}.parquet',
+            'preprocessor_path': PREPROCESSOR_PATH,
         })
+
+        # dvc track
+        PROCESSED_DATA_PATH = os.path.join('metrics', f'data_{stockcode}.json')
+        with open(PROCESSED_DATA_PATH, 'w') as f:
+            json.dump(metrics, f, indent=4)
 
     if should_scale:
         preprocessor.fit(df.copy().drop(target_col, axis='columns'))
@@ -119,15 +125,6 @@ def preprocess(stockcode: str = '', target_col: str = 'quantity', should_scale: 
         with open('preprocessors/feature_names.json', 'w') as f:
             feature_names = preprocessor.get_feature_names_out()
             json.dump(feature_names.tolist(), f)
-
-    metrics.update({
-        'preprocessor_path': PREPROCESSOR_PATH,
-    })
-
-    # dvc track
-    PROCESSED_DATA_PATH = os.path.join('metrics', f'data_{stockcode}.json')
-    with open(PROCESSED_DATA_PATH, 'w') as f:
-        json.dump(metrics, f, indent=4)
 
     return  X_train, X_val, X_test, y_train, y_val, y_test, preprocessor
 
