@@ -1,15 +1,15 @@
 {
-    "mse_unprivileged": 4.147130246995987,
-    "mae_unprivileged": 1.7783325695628254,
-    "rmsle_unprivileged": 0.6224890862719197,
-    "mean_prediction_unprivileged": 2.8450019359588623,
-    "mae_diff": 1.7783325695628254,
-    "mean_outcome_difference": 2.8450019359588623,
+    "mse_unprivileged": 5.2471794858765515,
+    "mae_unprivileged": 1.9578099035853478,
+    "rmsle_unprivileged": 0.6888630051860002,
+    "mean_prediction_unprivileged": 2.821240186691284,
+    "mae_diff": 1.9578099035853478,
+    "mean_outcome_difference": 2.821240186691284,
     "is_mod_acceptable": 0,
-    "model_version": "dfn_85123A_28913",
+    "model_version": "dfn_85123A_31013",
     "sensitive_feature": "is_registered",
     "privileged_group": 1,
     "mod_threshold": 0.1,
     "stockcode": "85123A",
-    "timestamp": "2025-10-06T23:23:47.155363"
+    "timestamp": "2025-10-06T23:41:40.741477"
 }
