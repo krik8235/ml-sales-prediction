@@ -11,7 +11,7 @@ def etl_pipeline(stockcode: str = '', impute_stockcode: bool = False): # type: i
 
     # load perquet file
     ORIGINAL_DF_PATH = os.path.join('data', 'original_df.parquet')
-    df.to_parquet(ORIGINAL_DF_PATH, index=False) # dvc versioned
+    df.to_parquet(ORIGINAL_DF_PATH, index=False) # dvc
 
     # transform
     df = scripts.structure_missing_values(df=df)

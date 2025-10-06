@@ -285,8 +285,13 @@ dvc push
 rm models/production/dfn_best_{STOCKCODE}.pth
 ```
 
-To edit the DVC pipeline, update `dvc.yaml` and `params.yaml` for parameter updates.
+- To check the cache status explicitly:
 
+```bash
+dvc data status --not-in-remote
+```
+
+- To edit the DVC pipeline, update `dvc.yaml` and `params.yaml` for parameter updates.
 
 
 ### Schedule run with **Prefect**
