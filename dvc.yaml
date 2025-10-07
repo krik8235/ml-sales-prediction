@@ -219,4 +219,3 @@ stages:
     metrics:
       - metrics/dfn_risk_fairness_${params.stockcode}.json:
           type: json
-          cache: false
