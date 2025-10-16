@@ -1,9 +1,6 @@
 version: v1.1299.0
 
 ignore:
-  Dockerfile.sagemaker:
-    - "*":
-      reason: "Not used"
   SNYK-PYTHON-TORCH-10332643:
     - "*":
       reason: "No direct upgrade or patch available for this issue."
