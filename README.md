@@ -16,8 +16,15 @@
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 
-- [Key Features](#key-features)
+- [The Project Overview](#the-project-overview)
 - [The System Architecture](#the-system-architecture)
+  - [Core AWS Resources](#core-aws-resources)
+  - [ML Lineage Integration](#ml-lineage-integration)
+  - [CI/CD Pipeline Integration](#cicd-pipeline-integration)
+- [The Inference](#the-inference)
+  - [Models Trained](#models-trained)
+  - [Performance Validation Metrics](#performance-validation-metrics)
+  - [ML Techniques Implemented](#ml-techniques-implemented)
 - [Quick Start](#quick-start)
   - [Installing the package manager](#installing-the-package-manager)
   - [Installing dependencies](#installing-dependencies)
@@ -45,33 +52,161 @@
 
 <hr />
 
-## Key Features
 
-A dynamic pricing system for an online retailer using predictions served by ML models:
+## The Project Overview
 
-   - A multi-layered Feedforward Neural Network,
+This project describes the development and deployment of a serverless machine learning system designed to recommend optimal retail pricing which maximizes product sales.
 
-   - A Light GBM regressor and
+The system aims to allow mid-sized retailers to compete effectively with larger players.
 
-   - An Elastic Net,
-
-hosted on the containerized serverless architecture.
-
+<hr />
 
 ## The System Architecture
 
-<img src='https://res.cloudinary.com/dfeirxlea/image/upload/v1754580450/portfolio/zafielthrjkxrdgsd5ig.png'/>
+The architecture establishes a scalable, serverless microservice using **AWS Lambda**, triggered by an API Gateway.
 
-<br>
+The prediction logic is fully containerized via **Docker**, which stored in **AWS ECR**.
 
-The system design focuses on the following points:
+Trained models and features are centrally managed in **S3**, while **ElastiCache (Redis)** provides a low-latency caching layer for historical data and predictions.
 
-- The application is fully containerized on **Docker** for universal accessibility.
-- The container image is stored in **Elastic Container Registry (ECR)**.
-- **API Gateway's REST API endpoints** trigger an event to invoke the Lambda function.
-- **Lambda function** loads the container image from ECR and perform inference.
-- Trained models, processors, and input features are stored in the **S3** buckets.
-- A **Redis client** caches analytical data and past prediction results stored in ElastiCache.
+This event-driven setup ensures automatic scaling and pay-per-use efficiency.
+
+<div  align="center">
+<img
+  src='https://cdn.hashnode.com/res/hashnode/image/upload/v1760860401076/ae657214-fe63-4de0-a9ca-a1033bff2907.png'
+  alt='[Figure A. The system architecture (Created by Kuriko IWAI)]'
+/>
+</div>
+
+**Figure A.** The system architecture (Created by Kuriko IWAI)
+
+### Core AWS Resources
+
+The infrastructure leverages AWS ecosystem:
+
+* **Docker / AWS ECR as Microservice container**: Packages the prediction logic and dependencies. AWS Lambda pulls the image from ECR for consistent, universal deployment.
+
+* **AWS API Gateway as REST API endpoint**: Routes external client-side UI requests (via a Flask application) to trigger the Lambda function.
+
+* **AWS Lambda as inference**: Executes the inference function, loading the container, models, and features to calculate price recommendations.
+
+* **AWS S3 as storage & feature store**: Stores raw features, trained model artifacts, processors, and DVC metadata for ML Lineage.
+
+* **AWS ElastiCache and Redis client as caching layer**: Stores cached analytical data and past price predictions to improve latency and resource efficiency.
+
+
+### ML Lineage Integration
+
+A dedicated ML Lineage process is integrated using **DVC (Data Version Control)** and scheduled by **Prefect**, an open-source workflow scheduler, running weekly.
+
+* **Lineage Scope (DVC):** DVC tracks the entire lifecycle, including **Data** (ETL/preprocessing), **Experiments** (hyperparameter tuning/validation), and **Models/Prediction** (artifacts, metrics).
+
+* **Data Quality Gate:** Models must pass stringent quality checks before being authorized to serve predictions:
+
+    * **Data Drift Tests:** Handled by **Evently AI** to identify shifts in data distribution.
+
+    * **Fairness Tests:** Measures SHAP scores and other custom metrics to ensure the model operates without bias.
+
+* **Automation:** **Prefect** triggers DVC *weekly* to check for updates in data or scripts and executes the full lineage process if changes are detected, ensuring continuous model freshness and quality.
+
+
+### CI/CD Pipeline Integration
+
+The infrastructure and model lifecycle are managed through a robust MLOps practice using a CI/CD pipeline integrated with GitHub.
+
+* **Code Lineage:** Handled by **GitHub**, protected by **branch rules** and enforced **pull request reviews**.
+
+* **Source:** Code commit to GitHub triggers a **GitHub Actions workflow**.
+
+* **Testing & Building:** Automated GitHub Actions run:
+
+    * **Test Phase:** Runs PyTest (unit/integration tests), SAST (Static Application Security Testing), and SCA (Software Composition Analysis) for dependencies using **Synk**.
+
+    * **Build Phase:** If tests pass, **AWS CodeBuild** is triggered to build the Docker image and push it to ECR.
+
+* **Deployment:** A **human review phase** is mandatory between the build and deployment. After approval, another GitHub Actions workflow is *manually* triggered to deploy the updated Lambda function to staging or production.
+
+
+<div align="center">
+<img
+  src='https://cdn.hashnode.com/res/hashnode/image/upload/v1760860467508/896750af-22d3-45ca-9fc1-25b96f77ab0b.png'
+  alt='[Figure B. The CI/CD pipeline (Created by Kuriko IWAI)]'
+/>
+</div>
+
+**Figure B.** The CI/CD pipeline (Created by Kuriko IWAI)
+
+<hr />
+
+## The Inference
+
+The process is designed for consistent, automated data and model management through MLOps tools:
+
+1. The client UI sends a price recommendation request via the **Flask** application.
+
+2. The request hits the **API Gateway** endpoint.
+
+3. API Gateway triggers the **AWS Lambda function**.
+
+4. Lambda loads the Docker container from **ECR**.
+
+5. The function retrieves the latest features and model artifacts from **S3** and checks **ElastiCache/Redis** for cached data.
+
+6. The primary model performs inference on the logarithmically transformed quantity data and returns the optimal price recommendation.
+
+
+### Models Trained
+
+The system utilizes multiple machine learning models to ensure prediction redundancy and reliability. The primary mechanism involves predicting the **quantity of product sold** at a given price point.
+
+* **Primary Model:** Multi-layered feedforward network (PyTorch).
+
+    * **Role:** Serves first-line predictions.
+
+    * **Tuning:** Tuned via **Optuna's Bayesian Optimization** (with grid search fallback).
+
+* **Backup Models:** LightGBM, SVR, and Elastic Net (Scikit-Learn).
+
+    * **Role:** Prioritized backups used if the primary model fails, ensuring redundancy.
+
+    * **Tuning:** Tuned via the **Scikit-Optimize framework**.
+
+
+### Performance Validation Metrics
+
+Models are evaluated using metrics corresponding to both transformed and original data, where a lower value indicates better performance.
+
+* **For Logged Values:** **Mean Squared Error (MSE).**
+
+* **For Actual (Original) Values:** **Root Mean Squared Log Error (RMSLE)** and **Mean Absolute Error (MAE)**.
+
+
+### ML Techniques Implemented
+
+1. **Logarithmic Transformation (Data Preprocessing):**
+
+    * Quantity data is logged before training and prediction to achieve a denser data distribution. This is crucial for normalizing skewed data and reducing the influence of extreme values (outliers), enabling all models to learn underlying patterns more effectively.
+
+2. **Model Diversity and Redundancy:**
+
+    * The system employs a hybrid approach combining a **Multi-layered Feedforward Network (Deep Learning)** as the primary predictor with diverse **Traditional Machine Learning Models** (LightGBM, SVR, Elastic Net) as backups.
+
+    * This multi-model inference strategy provides a failover mechanism, ensuring high availability by loading a prioritized backup model if the primary fails.
+
+3. **Advanced Hyperparameter Optimization:**
+
+    * **Bayesian Optimization (Optuna)** is utilized for the deep learning primary model, efficiently searching the hyperparameter space to find optimal settings (with a grid search fallback available).
+
+    * The backup Scikit-Learn models are tuned using the **Scikit-Optimize framework**.
+
+4. **Production Quality Gates:**
+
+    * To ensure the model remains reliable in a dynamic retail environment, the ML Lineage process incorporates necessary quality checks as techniques:
+
+        * **Data Drift Testing (Evently AI):** Continuously identifies shifts in data distributions in production that could compromise the model's generalization capabilities.
+
+        * **Fairness Testing:** Validates that the model operates without unwanted bias across different features or segments before being authorized to serve predictions.
+
 
 <hr />
 
@@ -466,3 +601,5 @@ Common issues and solutions:
 └── .pre-commit-config.yaml             # pre-commit check config
 └── .synk                               # synk (dependency and code scanning) config
 ```
+
+*All images and contents, unless otherwise noted, are by the author.*
