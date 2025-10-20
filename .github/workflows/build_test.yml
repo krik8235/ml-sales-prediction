@@ -12,8 +12,8 @@ env:
 
 # set permissions for oicd (open id connect) authentication with aws
 permissions:
-  id-token: write # for requesting the jwt token from GitHub's OIDC provider.
-  contents: read # for checking out the code in the repo
+  id-token: write # request a jwt token from GitHub's OIDC provider.
+  contents: read # read code in repo
   security-events: write
 
 jobs:
