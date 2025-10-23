@@ -76,11 +76,11 @@ stages:
     outs:
     - path: metrics/data_drift_85123A.json
       hash: md5
-      md5: 139fe4f5857c604a1720193db9374605
+      md5: e92105bdefd0b4dd9a4e96bc1cda0bb3
       size: 606
     - path: reports/data_drift_report_85123A.html
       hash: md5
-      md5: 27504c81547200da6abf28762f467747
+      md5: 12ac4b076da18f272521a7036bde13ea
       size: 4557812
   preprocess_full:
     cmd: "python src/data_handling/preprocess.py --target_col quantity --should_scale
@@ -213,7 +213,7 @@ stages:
       size: 1630
     - path: metrics/data_85123A.json
       hash: md5
-      md5: c58d2d3a2b4c6daf4655bf2ea157b3e1
+      md5: 132da5d7d5952ebbdeab68912deeb9ea
       size: 780
   tune_primary_model:
     cmd: "python src/model/torch_model/main.py data/x_train_processed_85123A.parquet
@@ -232,8 +232,8 @@ stages:
       nfiles: 30
     - path: src/model/
       hash: md5
-      md5: 8b32c64545d94d0bdb132ee25fea1fcd.dir
-      size: 193021
+      md5: b27407b6e3abb5e578831f8c01a15d2d.dir
+      size: 193024
       nfiles: 57
     - path: src/model/torch_model/main.py
       hash: md5
@@ -248,12 +248,12 @@ stages:
     outs:
     - path: metrics/dfn_val_85123A.json
       hash: md5
-      md5: d8dbfeb8fa60fc5c8cc88663f78501ca
-      size: 1673
+      md5: b572d503ab72f431baedf568530fdf63
+      size: 984
     - path: models/production/dfn_best_85123A.pth
       hash: md5
-      md5: 5e98297730a70734e28cf33746a2d404
-      size: 1104617
+      md5: 00067bb9cd4cb466ce963b34aea6200b
+      size: 584939
   inference_primary_model:
     cmd: "python src/model/torch_model/inference.py data/x_test_processed_85123A.parquet
       data/y_test_df_85123A.parquet models/production/dfn_best_85123A.pth 85123A is_registered
@@ -261,8 +261,8 @@ stages:
     deps:
     - path: models/production/
       hash: md5
-      md5: e84033bc62b88ed2f9cb2dd713ca6835.dir
-      size: 1104638
+      md5: 0d5eea79d247345f485e65ee42f712eb.dir
+      size: 584960
       nfiles: 2
     - path: src/_utils/
       hash: md5
@@ -271,8 +271,8 @@ stages:
       nfiles: 10
     - path: src/model/
       hash: md5
-      md5: 8b32c64545d94d0bdb132ee25fea1fcd.dir
-      size: 193021
+      md5: b27407b6e3abb5e578831f8c01a15d2d.dir
+      size: 193024
       nfiles: 57
     - path: src/model/torch_model/inference.py
       hash: md5
@@ -286,32 +286,32 @@ stages:
     outs:
     - path: data/dfn_inference_results_85123A.parquet
       hash: md5
-      md5: 74b5ebcb342b6907321fd5bf937e4255
-      size: 2965
+      md5: 04a0dfe08b9ffaa9b29440a02c51e119
+      size: 3797
     - path: metrics/dfn_inf_85123A.json
       hash: md5
-      md5: 893ffc63aafbb054d5fab036ffd289b7
-      size: 1675
+      md5: ca2a02c78c0b392ccc4a3d01d4a4c723
+      size: 985
     - path: reports/dfn_raw_shap_values_85123A.parquet
       hash: md5
-      md5: 48b5d8b7991d3127100710a8d854392c
-      size: 181420
+      md5: 05c9117a76f71872059566c9efbc1d17
+      size: 181167
     - path: reports/dfn_shap_mean_abs_85123A.json
       hash: md5
-      md5: 6cc91a395c345c9e54f8232001c7501f
-      size: 5905
+      md5: f2506369eb2df428e4db80dce21f40b5
+      size: 5914
     - path: reports/dfn_shap_summary_85123A.json
       hash: md5
-      md5: ac54dccf4197a359d9b4355658f04f96
-      size: 3488210
+      md5: 93014a1dc510db638585b1ac1edb06cd
+      size: 3495084
   assess_model_risk:
     cmd: "python src/model/torch_model/assess_risk_and_fairness.py data/dfn_inference_results_85123A.parquet
       metrics/dfn_risk_fairness_85123A.json is_registered 85123A 1 0.1\n"
     deps:
     - path: data/dfn_inference_results_85123A.parquet
       hash: md5
-      md5: 74b5ebcb342b6907321fd5bf937e4255
-      size: 2965
+      md5: 04a0dfe08b9ffaa9b29440a02c51e119
+      size: 3797
     - path: src/_utils/
       hash: md5
       md5: ae41392532188d290395495f6827ed00.dir
@@ -330,5 +330,5 @@ stages:
     outs:
     - path: metrics/dfn_risk_fairness_85123A.json
       hash: md5
-      md5: 551bf43e63fd5be103acffcd76c92f9c
-      size: 516
+      md5: 2e076923d27a31a005bfbfde3793c264
+      size: 518

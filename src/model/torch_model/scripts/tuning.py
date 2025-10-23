@@ -196,7 +196,7 @@ def bayesian_optimization(X_train, X_val, y_train, y_val, n_trials: int = 50, nu
         ).to(device)
 
         # optimizer
-        learning_rate = trial.suggest_float('learning_rate', 1e-10, 1e-1, log=True)
+        learning_rate = trial.suggest_float('learning_rate', 1e-4, 1e-2, log=True)
         optimizer_name = trial.suggest_categorical('optimizer', ['adam', 'rmsprop', 'sgd', 'adamw', 'adamax', 'adadelta', 'radam'])
         optimizer = handle_optimizer(optimizer_name=optimizer_name, model=model, lr=learning_rate)
 
