@@ -4,7 +4,6 @@ import torch
 import torch.nn as nn
 
 from src.model.torch_model.scripts.pretrained_base import DFN
-from src.model.torch_model.scripts.tuning import handle_optimizer
 from src._utils import main_logger, MODEL_SAVE_PATH, retrieve_file_path
 
 
@@ -69,6 +68,8 @@ def load_model(checkpoint: dict = {}, model_name: str = 'dfn', trig: str ='best'
 
 # for training
 def load_model_and_optimizer(checkpoint: dict = {}, model_name: str = 'dfn', trig: str ='best', file_path=None, device_type=None):
+    from src.model.torch_model.scripts.tuning import handle_optimizer
+
     try:
         # device
         device_type = device_type if device_type else "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"

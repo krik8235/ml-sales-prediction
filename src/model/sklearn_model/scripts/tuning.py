@@ -1,13 +1,13 @@
 import numpy as np
 import pandas as pd
-import lightgbm as lgb  # type: ignore
+import lightgbm as lgb
 from typing import Iterable
 from itertools import product
 from functools import partial
 from sklearn.linear_model import ElasticNet
 from sklearn.model_selection import KFold
 from sklearn.metrics import mean_squared_error
-from skopt import gp_minimize # type: ignore
+from skopt import gp_minimize
 
 from src.model.sklearn_model.scripts.predict import make_prediction
 from src._utils import main_logger

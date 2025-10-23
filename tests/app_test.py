@@ -19,7 +19,7 @@ def test_hello_world(flask_client):
 
 
 
-@patch('app.t.scripts.load_model')
+@patch('app.script_load_model')
 @patch('torch.load')
 @patch('app._redis_client', new_callable=MagicMock)
 @patch('app.joblib.load')
@@ -88,7 +88,7 @@ def test_predict_endpoint_primary_model(
 @patch('joblib.load')
 @patch('app.get_redis_client')
 @patch('app.load_model')
-@patch('app.t.scripts.load_model')
+@patch('app.script_load_model')
 def test_endpoint_backup_model(
     mock_load_model_from_scripts,
     mock_load_model,

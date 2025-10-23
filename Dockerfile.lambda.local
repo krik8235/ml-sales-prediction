@@ -7,26 +7,29 @@ ENV JOBLIB_MULTIPROCESSING=0
 ##  set the working directory in the container
 WORKDIR /app
 
-# copy dvc config
+# copy necessary scripts
+COPY .dockerignore /app/
 COPY .dvc/config /app/.dvc/
-
-# copy dvc.yaml to access meta data
 COPY dvc.yaml /app/
-
-# copy the entire repository
-COPY . /app/
+COPY params.yaml /app/
+COPY dvc.lock /app/
+COPY requirements_docker.txt /app/
+COPY app.py /app/
+COPY .env /app/
+COPY src/_utils/ /app/src/_utils/
+COPY src/model/torch_model/scripts/loading.py /app/src/model/torch_model/scripts/
+COPY src/model/torch_model/scripts/pretrained_base.py /app/src/model/torch_model/scripts/
+COPY src/data_handling/scripts/imputation.py /app/src/data_handling/scripts/
 
 # install deps
 RUN python -m pip install --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements_docker.txt
 
 # install dvc deps
 RUN pip install --no-cache-dir dvc dvc-s3
 
 # dvc config - disabing automatic interaction with the git repo
 RUN dvc config core.no_scm true
-
-
 
 ENTRYPOINT [ "python" ]
 

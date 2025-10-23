@@ -60,7 +60,7 @@ sklearn_models = [
             max_iter=[1000],
         ),
         'search_space_bayesian': [
-           Categorical(['linear', 'poly', 'rbf', 'sigmoid'], name='kernel'),
+        Categorical(['linear', 'poly', 'rbf', 'sigmoid'], name='kernel'),
             Integer(2, 5, name='degree'),
             Categorical(['scale', 'auto'], name='gamma'),
             Real(1e-3, 1.0, 'log-uniform', name='coef0'),

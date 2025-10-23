@@ -9,17 +9,26 @@ ENV DVC_REMOTE_NAME="storage"
 ENV DVC_GLOBAL_SITE_CACHE_DIR="/tmp/dvc_global"
 
 # copy requirements file and install dependencies
-COPY requirements.txt ${LAMBDA_TASK_ROOT}
+COPY requirements_docker.txt ${LAMBDA_TASK_ROOT}
+
 RUN python -m pip install --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements_docker.txt
 RUN pip install --no-cache-dir dvc dvc-s3
 
 # dvc
 RUN dvc init --no-scm
 RUN dvc config core.no_scm true
 
-
-# copy the code to the lambda task root
-COPY . ${LAMBDA_TASK_ROOT}
+# COPY . ${LAMBDA_TASK_ROOT}
+COPY .dockerignore ${LAMBDA_TASK_ROOT}/
+COPY .dvc/config ${LAMBDA_TASK_ROOT}/.dvc/
+COPY dvc.yaml ${LAMBDA_TASK_ROOT}/
+COPY params.yaml ${LAMBDA_TASK_ROOT}/
+COPY dvc.lock ${LAMBDA_TASK_ROOT}/
+COPY app.py ${LAMBDA_TASK_ROOT}/
+COPY src/_utils/ ${LAMBDA_TASK_ROOT}/src/_utils/
+COPY src/model/torch_model/scripts/loading.py ${LAMBDA_TASK_ROOT}/src/model/torch_model/scripts/
+COPY src/model/torch_model/scripts/pretrained_base.py ${LAMBDA_TASK_ROOT}/src/model/torch_model/scripts/
+COPY src/data_handling/scripts/imputation.py ${LAMBDA_TASK_ROOT}/src/data_handling/scripts/
 
 CMD [ "app.handler" ]

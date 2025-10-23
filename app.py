@@ -21,8 +21,8 @@ from dotenv import load_dotenv
 import dvc.api
 from dvc.exceptions import DvcException
 
-import src.model.torch_model as t
-import src.data_handling as data_handling
+from src.model.torch_model.scripts.loading import load_model as script_load_model
+from src.data_handling.scripts.imputation import fetch_imputation_cache_key_and_file_path
 from src._utils import main_logger, s3_extract
 
 # silence warnings
@@ -190,7 +190,7 @@ def load_model(stockcode: str = ''):
             with dvc.api.open(DFN_FILE_PATH_STOCKCODE, remote=DVC_REMOTE_NAME, mode='rb') as fd:
                 checkpoint = torch.load(fd, weights_only=False, map_location=device)
                 main_logger.info('✅ successfully loaded dfn via dvc api')
-            model = t.scripts.load_model(checkpoint=checkpoint, file_path=DFN_FILE_PATH_STOCKCODE)
+            model = script_load_model(checkpoint=checkpoint, file_path=DFN_FILE_PATH_STOCKCODE)
             model.eval()
             main_logger.info(f'loaded trained dfn by stockcode: {stockcode}')
 
@@ -198,7 +198,7 @@ def load_model(stockcode: str = ''):
             try:
                 model_data_bytes_io = s3_extract(file_path=DFN_FILE_PATH_STOCKCODE)
                 checkpoint = torch.load(model_data_bytes_io, weights_only=False, map_location=device) # type: ignore
-                model = t.scripts.load_model(checkpoint=checkpoint, file_path=DFN_FILE_PATH_STOCKCODE)
+                model = script_load_model(checkpoint=checkpoint, file_path=DFN_FILE_PATH_STOCKCODE)
                 model.eval()
                 main_logger.info(f'loaded trained dfn by stockcode: {stockcode}')
             except:
@@ -206,7 +206,7 @@ def load_model(stockcode: str = ''):
                     main_logger.info('... loading artifacts - trained dfn full ...')
                     model_data_bytes_io_ = s3_extract(file_path=DFN_FILE_PATH)
                     checkpoint_ = torch.load(model_data_bytes_io_, weights_only=False, map_location=device) # type: ignore
-                    model = t.scripts.load_model(checkpoint=checkpoint_, file_path=DFN_FILE_PATH)
+                    model = script_load_model(checkpoint=checkpoint_, file_path=DFN_FILE_PATH)
                     model.eval()
                     main_logger.info('loaded trained dfn overall')
                 except:
@@ -216,7 +216,7 @@ def load_model(stockcode: str = ''):
             main_logger.info('... loading artifacts - trained dfn ...')
             model_data_bytes_io_ = s3_extract(file_path=DFN_FILE_PATH)
             checkpoint_ = torch.load(model_data_bytes_io_, weights_only=False, map_location=device) # type: ignore
-            model = t.scripts.load_model(checkpoint=checkpoint_, file_path=DFN_FILE_PATH)
+            model = script_load_model(checkpoint=checkpoint_, file_path=DFN_FILE_PATH)
             model.eval()
             main_logger.info('loaded trained dfn overall')
         except:
@@ -233,13 +233,13 @@ def load_artifacts_primary_model():
 
         if model_data_bytes_io is not None:
             checkpoint = torch.load(model_data_bytes_io, weights_only=False, map_location=device)
-            model = t.scripts.load_model(checkpoint=checkpoint, trig='best')
+            model = script_load_model(checkpoint=checkpoint, trig='best')
             model.eval()
 
     except Exception as e:
         main_logger.critical(f"failed to load one or more essential artifacts during cold start: {e}", exc_info=True)
         try:
-            model = t.scripts.load_model(file_path=DFN_FILE_PATH)
+            model = script_load_model(file_path=DFN_FILE_PATH)
         except:
             raise RuntimeError("flask application failed to initialize due to missing or invalid model artifacts.")
 
@@ -309,7 +309,7 @@ def predict_price(stockcode):
         main_logger.info(f'query parameters: {data}')
 
         # define cache key for df_stockcode
-        cache_key_df_stockcode, file_path_df_stockcode = data_handling.scripts.fetch_imputation_cache_key_and_file_path(stockcode=stockcode)
+        cache_key_df_stockcode, file_path_df_stockcode = fetch_imputation_cache_key_and_file_path(stockcode=stockcode)
         hash_data_st = { 'stockcode': stockcode  }
         params_hash_st = hashlib.sha256(str(sorted(hash_data_st.items())).encode()).hexdigest()
         cache_key_df_stockcode = f'{cache_key_df_stockcode}:{params_hash_st}'

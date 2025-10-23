@@ -1,7 +1,6 @@
 import os
 import numpy as np
 import pandas as pd
-# from prefect import task
 
 from src._utils import main_logger, s3_upload
 
