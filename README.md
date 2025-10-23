@@ -264,7 +264,7 @@ Create `.env` file in the project root and add secret vars following `.env.sampl
 uv run app.py --cache-clear
 ```
 
-The API is available at `http://localhost:5002`.
+The API endpoint is available at `http://localhost:5002`.
 
 
 <hr />
@@ -365,7 +365,7 @@ FLUSHDB
 - Add a package: `uv add <package>`
 - Remove a package: `uv remove <package>`
 - Run a command in the virtual environment: `uv run <command>`
-- To completely refresh the environement, run the following commands:
+- To completely refresh the environement:
 
 ```bash
 rm -rf .venv
