@@ -145,11 +145,20 @@ jobs:
 
       - name: test lambda function
         if: github.event.inputs.branch == 'main'
-        run: |
+        run: | # use a mock payload that mimics an api endpoint
+          MOCK_PAYLOAD='{
+            "httpMethod": "GET",
+            "path": "/test",
+            "headers": { "Content-Type": "application/json" },
+            "requestContext": { "resourcePath": "/test" },
+            "body": "{\"test\": true}",
+            "isBase64Encoded": false
+          }'
+
           aws lambda invoke \
             --function-name ${{ secrets.LAMBDA_FUNCTION_NAME }} \
             --region ${{ secrets.AWS_REGION_NAME }} \
-            --payload '{"test": true}' \
+            --payload "$MOCK_PAYLOAD" \
             --cli-binary-format raw-in-base64-out \
             response.json
 
