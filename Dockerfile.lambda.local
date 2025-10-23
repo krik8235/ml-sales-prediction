@@ -10,10 +10,10 @@ WORKDIR /app
 # copy dvc config
 COPY .dvc/config /app/.dvc/
 
-# copy dvc.yaml to access meta data stored in .yml
+# copy dvc.yaml to access meta data
 COPY dvc.yaml /app/
 
-# copy the entire repository (except .dockerignore) contents into the container at /app
+# copy the entire repository
 COPY . /app/
 
 # install deps

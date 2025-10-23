@@ -18,3 +18,4 @@ pyarrow>=21.0.0
 prefect>=3.4.19
 prefect-aws>=0.5.13
 evidently>=0.7.14
+scikit-learn>=1.7.2

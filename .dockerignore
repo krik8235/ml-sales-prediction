@@ -10,7 +10,10 @@ dist/
 [a-f]*.log
 
 __pycache__/
-.dvc/cache/
+.git/
+.dvc/cache
+.dvc/tmp
+.dvc/plots
 .dvcignore
 .legacy/
 .pytest_cache/

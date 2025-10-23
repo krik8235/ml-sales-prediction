@@ -30,6 +30,7 @@ dependencies = [
     "prefect>=3.4.19",
     "evidently>=0.7.14",
     "shap>=0.48.0",
+    "scikit-learn>=1.7.2",
 ]
 
 [project.urls]
