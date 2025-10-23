@@ -76,11 +76,11 @@ stages:
     outs:
     - path: metrics/data_drift_85123A.json
       hash: md5
-      md5: 66dfaaba2abfc34a3eef3c804eb953fb
+      md5: 139fe4f5857c604a1720193db9374605
       size: 606
     - path: reports/data_drift_report_85123A.html
       hash: md5
-      md5: 13205e2f0896a2fcd19b40aeb97dba5d
+      md5: 27504c81547200da6abf28762f467747
       size: 4557812
   preprocess_full:
     cmd: "python src/data_handling/preprocess.py --target_col quantity --should_scale
@@ -213,7 +213,7 @@ stages:
       size: 1630
     - path: metrics/data_85123A.json
       hash: md5
-      md5: 0542fbd872ae09834675b3ddba5a271c
+      md5: c58d2d3a2b4c6daf4655bf2ea157b3e1
       size: 780
   tune_primary_model:
     cmd: "python src/model/torch_model/main.py data/x_train_processed_85123A.parquet
@@ -248,12 +248,12 @@ stages:
     outs:
     - path: metrics/dfn_val_85123A.json
       hash: md5
-      md5: c416f8758b0c4cfb95998ce0e2f1596a
-      size: 1164
+      md5: d8dbfeb8fa60fc5c8cc88663f78501ca
+      size: 1673
     - path: models/production/dfn_best_85123A.pth
       hash: md5
-      md5: e5ed198a63bfb1a837a3c8c02497302c
-      size: 1460539
+      md5: 5e98297730a70734e28cf33746a2d404
+      size: 1104617
   inference_primary_model:
     cmd: "python src/model/torch_model/inference.py data/x_test_processed_85123A.parquet
       data/y_test_df_85123A.parquet models/production/dfn_best_85123A.pth 85123A is_registered
@@ -261,8 +261,8 @@ stages:
     deps:
     - path: models/production/
       hash: md5
-      md5: 45cc10359dd4634b47b77a08e547a543.dir
-      size: 1460560
+      md5: e84033bc62b88ed2f9cb2dd713ca6835.dir
+      size: 1104638
       nfiles: 2
     - path: src/_utils/
       hash: md5
@@ -286,32 +286,32 @@ stages:
     outs:
     - path: data/dfn_inference_results_85123A.parquet
       hash: md5
-      md5: 16efa84e2a6cd37d901c36f33e60c4a2
-      size: 2653
+      md5: 74b5ebcb342b6907321fd5bf937e4255
+      size: 2965
     - path: metrics/dfn_inf_85123A.json
       hash: md5
-      md5: be16c6b61cfa967619137b04e3d24293
-      size: 1164
+      md5: 893ffc63aafbb054d5fab036ffd289b7
+      size: 1675
     - path: reports/dfn_raw_shap_values_85123A.parquet
       hash: md5
-      md5: 92f9121d4cc985975ec11612d4111643
-      size: 181094
+      md5: 48b5d8b7991d3127100710a8d854392c
+      size: 181420
     - path: reports/dfn_shap_mean_abs_85123A.json
       hash: md5
-      md5: 4556111b2f02409695be1c991871d187
-      size: 5913
+      md5: 6cc91a395c345c9e54f8232001c7501f
+      size: 5905
     - path: reports/dfn_shap_summary_85123A.json
       hash: md5
-      md5: 4e3534f6a7f4fbcaca51ac021f563b7f
-      size: 3494973
+      md5: ac54dccf4197a359d9b4355658f04f96
+      size: 3488210
   assess_model_risk:
     cmd: "python src/model/torch_model/assess_risk_and_fairness.py data/dfn_inference_results_85123A.parquet
       metrics/dfn_risk_fairness_85123A.json is_registered 85123A 1 0.1\n"
     deps:
     - path: data/dfn_inference_results_85123A.parquet
       hash: md5
-      md5: 16efa84e2a6cd37d901c36f33e60c4a2
-      size: 2653
+      md5: 74b5ebcb342b6907321fd5bf937e4255
+      size: 2965
     - path: src/_utils/
       hash: md5
       md5: ae41392532188d290395495f6827ed00.dir
@@ -330,5 +330,5 @@ stages:
     outs:
     - path: metrics/dfn_risk_fairness_85123A.json
       hash: md5
-      md5: 176d0f6f6db88995cd21da73b8c2ef09
-      size: 518
+      md5: 551bf43e63fd5be103acffcd76c92f9c
+      size: 516
