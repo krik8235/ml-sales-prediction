@@ -152,7 +152,9 @@ jobs:
             "headers": { "Content-Type": "application/json" },
             "requestContext": { "resourcePath": "/test" },
             "body": "{\"test\": true}",
-            "isBase64Encoded": false
+            "isBase64Encoded": false,
+            "queryStringParameters": null,
+            "multiValueQueryStringParameters": null
           }'
 
           aws lambda invoke \
