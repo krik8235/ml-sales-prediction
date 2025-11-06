@@ -38,7 +38,7 @@ def retrain():
     )
 
     # perform inf
-    X = np.concatenate([X_train, X_val], axis=0) if isinstance(X_train, np.ndarray) else pd.concat([X_train, X_val], ignore_index=True)
+    X = np.concatenate([X_train, X_val], axis=0) if isinstance(X_train, np.ndarray) else pd.concat([X_train, X_val], ignore_index=True) # type: ignore
     input_tensor = torch.tensor(X, dtype=torch.float32).to(device)
     # input_tensor = input_tensor.to(device)
 
