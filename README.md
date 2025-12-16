@@ -1,4 +1,4 @@
-# ML System for Price Prediction
+# Dynamic Pricing System (MLOps & Serverless MVP)
 
 ![MIT license](https://img.shields.io/badge/License-MIT-green)
 ![python ver](https://img.shields.io/badge/Python-3.12-purple)
