@@ -53,7 +53,7 @@
 <hr />
 
 
-## The Project Overview
+## Project Overview
 
 This project describes the development and deployment of a serverless machine learning system designed to recommend optimal retail pricing which maximizes product sales.
 
@@ -61,7 +61,7 @@ The system aims to allow mid-sized retailers to compete effectively with larger 
 
 <hr />
 
-## The System Architecture
+## System Architecture
 
 The architecture establishes a scalable, serverless microservice using **AWS Lambda**, triggered by an API Gateway.
 
