@@ -1,4 +1,4 @@
-# Dynamic Pricing System (MLOps & Serverless MVP)
+# Dynamic pricing system for mid-sized retailers
 
 ![MIT license](https://img.shields.io/badge/License-MIT-green)
 ![python ver](https://img.shields.io/badge/Python-3.12-purple)
