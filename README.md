@@ -106,9 +106,10 @@ Trained models and features are centrally managed in **S3**, while **ElastiCache
 
 This event-driven setup ensures automatic scaling and pay-per-use efficiency.
 
-<img src='https://cdn.hashnode.com/res/hashnode/image/upload/v1760860401076/ae657214-fe63-4de0-a9ca-a1033bff2907.png' alt='Figure A. The system architecture (Created by Kuriko IWAI)'/>
+<img src='https://res.cloudinary.com/dfeirxlea/image/upload/v1766205934/portfolio/wd8anv9dlhm2qif8grye.png' alt='Figure A. The system architecture (Created by Kuriko IWAI)'/>
 
-**Figure A.** The system architecture
+**Figure A.** DVC pipeline and system architecture (Created by Kuriko IWAI)
+
 
 ### Core AWS Resources
 
@@ -157,9 +158,9 @@ The infrastructure and model lifecycle are managed through a robust MLOps practi
 * **Deployment:** A **human review phase** is mandatory between the build and deployment. After approval, another GitHub Actions workflow is *manually* triggered to deploy the updated Lambda function to staging or production.
 
 
-<img src='https://cdn.hashnode.com/res/hashnode/image/upload/v1760860467508/896750af-22d3-45ca-9fc1-25b96f77ab0b.png' alt='Figure B. The CI/CD pipeline (Created by Kuriko IWAI)' />
+<img src='https://res.cloudinary.com/dfeirxlea/image/upload/v1766206547/p9g3g9wpotl3og7eqgnn.png' alt='Figure B. CI/CD pipeline (Created by Kuriko IWAI)' />
 
-**Figure B.** The CI/CD pipeline
+**Figure B.** CI/CD pipeline (Created by Kuriko Iwai)
 
 <hr />
 
